@@ -1,0 +1,22 @@
+{
+  "name": "TaskFlow Desktop",
+  "short_name": "TaskFlow",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "description": "A Google Tasks client for your desktop.",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/google-tasks.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/google-tasks.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "orientation": "any"
+}

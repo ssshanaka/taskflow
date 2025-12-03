@@ -1,70 +1,124 @@
-# Getting Started with Create React App
+# TaskFlow - Google Tasks Desktop App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A Progressive Web App (PWA) for managing Google Tasks on your desktop.
 
-## Available Scripts
+## Quick Start
 
-In the project directory, you can run:
+### Demo Mode (No Setup Required)
 
-### `npm start`
+1. Run `npm start`
+2. Click "Demo Mode (Offline)" on the landing page
+3. Start managing tasks locally!
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Google Sign-In Setup
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+To enable Google OAuth sign-in, you need to configure the Google Cloud Console:
 
-### `npm test`
+#### Step 1: Create a Google Cloud Project
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Click "Select a project" → "New Project"
+3. Name it "TaskFlow" and click "Create"
 
-### `npm run build`
+#### Step 2: Enable Google Tasks API
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. In Google Cloud Console, go to **APIs & Services** → **Library**
+2. Search for "Google Tasks API"
+3. Click on it and press **Enable**
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+#### Step 3: Create OAuth Credentials
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Go to **APIs & Services** → **Credentials**
+2. Click **Create Credentials** → **OAuth client ID**
+3. If prompted, configure the OAuth consent screen:
 
-### `npm run eject`
+   - User Type: **External**
+   - App name: **TaskFlow**
+   - User support email: _your email_
+   - Developer contact: _your email_
+   - Click **Save and Continue**
+   - Scopes: Click **Add or Remove Scopes**
+     - Add: `https://www.googleapis.com/auth/tasks`
+     - Add: `https://www.googleapis.com/auth/userinfo.profile`
+     - Add: `https://www.googleapis.com/auth/userinfo.email`
+   - Click **Save and Continue**
+   - Test users: Add your Gmail address
+   - Click **Save and Continue**
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+4. Back in Credentials, create OAuth client ID:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+   - Application type: **Web application**
+   - Name: **TaskFlow Web Client**
+   - Authorized redirect URIs:
+     - `http://localhost:3000`
+     - `http://localhost:3000/`
+     - (Add production URL when deploying, e.g., `https://taskflow.example.com`)
+   - Click **Create**
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+5. Copy the **Client ID** that appears
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+#### Step 4: Add Client ID to App
 
-## Learn More
+1. Open `src/hooks/useAuth.js`
+2. Replace the `GOOGLE_CLIENT_ID` value:
+   ```javascript
+   const GOOGLE_CLIENT_ID = "YOUR_CLIENT_ID_HERE.apps.googleusercontent.com";
+   ```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+#### Step 5: Test It
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. Run `npm start`
+2. Click **Sign in with Google**
+3. Authorize the app
+4. Your tasks should load!
 
-### Code Splitting
+## Troubleshooting
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### "Failed to Load - API Error: Forbidden"
 
-### Analyzing the Bundle Size
+This means the Google Tasks API is not enabled. Follow **Step 2** above.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### "Unauthorized redirect_uri"
 
-### Making a Progressive Web App
+Your redirect URI doesn't match. Make sure:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- `http://localhost:30 00` is listed in OAuth credentials
+- No trailing slashes mismatch
+- URL matches exactly (including protocol)
 
-### Advanced Configuration
+### "Access Denied" during sign-in
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Add your Google account as a test user in the OAuth consent screen (see Step 3).
 
-### Deployment
+## Development
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+```bash
+npm start          # Run development server
+npm run build      # Build for production
+npm test          # Run tests
+```
 
-### `npm run build` fails to minify
+## Architecture
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```
+src/
+├── services/      # Google Tasks API & Mock service
+├── hooks/        # useAuth hook for OAuth
+├── components/   # Reusable UI components
+├── pages/       # LandingPage & AppPage
+└── App.jsx      # Main app router
+```
+
+## Features
+
+- ✅ Google Tasks sync
+- ✅ Offline demo mode
+- ✅ PWA installable
+- ✅ Dark mode
+- ✅ Cross-platform (Windows, macOS, Linux)
+- ✅ Task lists and tasks CRUD
+- ✅ Completion tracking
+
+## License
+
+MIT - Open Source
