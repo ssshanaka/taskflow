@@ -39,19 +39,42 @@ const AppPage = ({ isDarkMode, toggleDarkMode, isStandalone, onLogout, userProfi
         
         setApi(service);
         
-        // Load task lists
+        // 1. Try to load from cache first (fast!)
+        if (!isDemoMode && service.getCachedTaskLists) {
+          const cachedLists = service.getCachedTaskLists();
+          if (cachedLists && cachedLists.length > 0) {
+            setTaskLists(cachedLists);
+            if (!currentListId) {
+              setCurrentListId(cachedLists[0].id);
+            }
+            // Don't turn off loading yet, or maybe we can? 
+            // Let's keep loading true but show content if we have it?
+            // Actually, for "instant" feel, we should probably stop the spinner if we have data.
+            setIsLoadingLists(false); 
+          }
+        }
+        
+        // 2. Fetch from network (background refresh)
         const data = await service.getTaskLists();
         if (data && data.items) {
           const uniqueItems = Array.from(new Map(data.items.map(item => [item.id, item])).values());
           setTaskLists(uniqueItems);
           
-          if (uniqueItems.length > 0) {
+          // Update cache
+          if (!isDemoMode && service.saveTaskListsToCache) {
+            service.saveTaskListsToCache(uniqueItems);
+          }
+          
+          if (uniqueItems.length > 0 && !currentListId) {
             setCurrentListId(uniqueItems[0].id);
           }
         }
       } catch (e) {
         console.error("Failed to initialize API", e);
-        setError(e.message || "Failed to load tasks. Please try again.");
+        // Only show error if we don't have cached data
+        if (taskLists.length === 0) {
+          setError(e.message || "Failed to load tasks. Please try again.");
+        }
       } finally {
         setIsLoadingLists(false);
       }
@@ -67,10 +90,24 @@ const AppPage = ({ isDarkMode, toggleDarkMode, isStandalone, onLogout, userProfi
     if (!api || !currentListId) return;
     
     const loadTasks = async () => {
+      // 1. Load from cache immediately
+      if (!isDemoMode && api.getCachedTasks) {
+        const cachedTasks = api.getCachedTasks(currentListId);
+        if (cachedTasks) {
+          setTasks(cachedTasks);
+        }
+      }
+
       setIsSyncing(true);
       try {
         const data = await api.getTasks(currentListId);
-        setTasks(data.items || []);
+        const newTasks = data.items || [];
+        setTasks(newTasks);
+        
+        // 2. Update cache
+        if (!isDemoMode && api.saveTasksToCache) {
+          api.saveTasksToCache(currentListId, newTasks);
+        }
       } catch (e) {
         console.error("Failed to load tasks", e);
       } finally {
@@ -87,10 +124,34 @@ const AppPage = ({ isDarkMode, toggleDarkMode, isStandalone, onLogout, userProfi
     if (!api || viewMode !== 'board' || taskLists.length === 0) return;
 
     const loadAllTasks = async () => {
+      // 1. Load from cache
+      if (!isDemoMode && api.getCachedTasks) {
+         const cachedAllTasks = {};
+         let hasCachedData = false;
+         taskLists.forEach(list => {
+            const cached = api.getCachedTasks(list.id);
+            if (cached) {
+                cachedAllTasks[list.id] = cached;
+                hasCachedData = true;
+            }
+         });
+         
+         if (hasCachedData) {
+             setAllTasksByList(prev => ({ ...prev, ...cachedAllTasks }));
+         }
+      }
+
       setIsSyncing(true);
       try {
         const data = await api.fetchAllTasks(taskLists);
         setAllTasksByList(data);
+        
+        // 2. Update cache for each list
+        if (!isDemoMode && api.saveTasksToCache) {
+            Object.entries(data).forEach(([listId, tasks]) => {
+                api.saveTasksToCache(listId, tasks);
+            });
+        }
       } catch (e) {
         console.error("Failed to load all tasks", e);
       } finally {

@@ -168,6 +168,55 @@ class GoogleTasksService {
       body: JSON.stringify({ title })
     });
   }
+
+  // Caching Helpers
+  getCacheKey(key) {
+    return `taskflow_cache_${key}`;
+  }
+
+  saveToCache(key, data) {
+    try {
+      const cacheItem = {
+        timestamp: Date.now(),
+        data: data
+      };
+      localStorage.setItem(this.getCacheKey(key), JSON.stringify(cacheItem));
+    } catch (e) {
+      console.warn('Failed to save to cache', e);
+    }
+  }
+
+  loadFromCache(key) {
+    try {
+      const item = localStorage.getItem(this.getCacheKey(key));
+      if (!item) return null;
+      
+      const parsed = JSON.parse(item);
+      // Optional: Check for expiry if needed, for now we just return what we have
+      // and let the network refresh it
+      return parsed.data;
+    } catch (e) {
+      console.warn('Failed to load from cache', e);
+      return null;
+    }
+  }
+
+  // Specific Cache Methods
+  getCachedTaskLists() {
+    return this.loadFromCache('task_lists');
+  }
+
+  saveTaskListsToCache(lists) {
+    this.saveToCache('task_lists', lists);
+  }
+
+  getCachedTasks(listId) {
+    return this.loadFromCache(`tasks_${listId}`);
+  }
+
+  saveTasksToCache(listId, tasks) {
+    this.saveToCache(`tasks_${listId}`, tasks);
+  }
 }
 
 export default GoogleTasksService;
