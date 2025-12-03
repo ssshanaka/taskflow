@@ -7,7 +7,6 @@ import FeatureCard from '../components/shared/FeatureCard';
 import StepCard from '../components/shared/StepCard';
 import PricingCard from '../components/shared/PricingCard';
 import InstallPromptModal from '../components/shared/InstallPromptModal';
-import AppPage from './AppPage';
 
 const LandingPage = ({ 
   isDarkMode, 
@@ -16,14 +15,8 @@ const LandingPage = ({
   setShowModal, 
   installPrompt,
   confirmInstall,
-  isAuthenticated,
-  userProfile,
-  authToken,
-  isDemoMode,
   onDemoLogin,
-  onLogout,
-  googleClientId,
-  sessionExpiry
+  googleClientId
 }) => {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
@@ -41,34 +34,21 @@ const LandingPage = ({
               <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">Experience the clean, focused task management you love. Install as a native app on Windows, macOS, or Linux directly from your browser.</p>
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-16">
                 <button onClick={() => setShowModal(true)} className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-lg shadow-lg shadow-blue-200 dark:shadow-blue-900/20 hover:shadow-xl hover:translate-y-[-2px] transition-all flex items-center gap-3 w-full sm:w-auto justify-center"><Download size={22} />Install App</button>
-                <div className="text-xs text-slate-400 font-medium px-4">v3.0.0 â€¢ PWA â€¢ All Platforms</div>
+                <div className="text-xs text-slate-400 font-medium px-4">v3.0.0 • PWA • All Platforms</div>
               </div>
             </div>
             
             {/* Laptop Preview */}
             <div className="w-full relative z-10 px-2 sm:px-4">
                <LaptopMockup>
-                 {isAuthenticated ? (
-                    <AppPage 
-                      isDarkMode={isDarkMode} 
-                      toggleDarkMode={toggleDarkMode}
-                      isStandalone={false} 
-                      onLogout={onLogout}
-                      userProfile={userProfile}
-                      authToken={authToken}
-                      isDemoMode={isDemoMode}
-                      sessionExpiry={sessionExpiry}
-                    />
-                 ) : (
-                    <div className="h-full w-full bg-slate-100 dark:bg-slate-950 relative">
-                      <div className="h-10 bg-slate-200 dark:bg-slate-800 flex items-center justify-between px-4 border-b border-slate-300 dark:border-slate-700 select-none">
-                        <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-slate-400/50" /><div className="w-3 h-3 rounded-full bg-slate-400/50" /><div className="w-3 h-3 rounded-full bg-slate-400/50" /></div>
-                        <div className="text-xs text-slate-500">Sign In</div>
-                        <div className="w-16"></div>
-                      </div>
-                      <LoginScreen onDemoLogin={onDemoLogin} hasClientId={!!googleClientId && !googleClientId.includes("YOUR_CLIENT_ID")} googleClientId={googleClientId} />
-                    </div>
-                 )}
+                 <div className="h-full w-full bg-slate-100 dark:bg-slate-950 relative">
+                   <div className="h-10 bg-slate-200 dark:bg-slate-800 flex items-center justify-between px-4 border-b border-slate-300 dark:border-slate-700 select-none">
+                     <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-slate-400/50" /><div className="w-3 h-3 rounded-full bg-slate-400/50" /><div className="w-3 h-3 rounded-full bg-slate-400/50" /></div>
+                     <div className="text-xs text-slate-500">Sign In</div>
+                     <div className="w-16"></div>
+                   </div>
+                   <LoginScreen onDemoLogin={onDemoLogin} hasClientId={!!googleClientId && !googleClientId.includes("YOUR_CLIENT_ID")} googleClientId={googleClientId} />
+                 </div>
                </LaptopMockup>
             </div>
           </div>
@@ -121,7 +101,7 @@ const LandingPage = ({
 
       {/* Footer */}
       <footer className="bg-slate-50 dark:bg-slate-900 py-12 border-t border-slate-200 dark:border-slate-800 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6"><div className="flex items-center gap-2"><div className="w-6 h-6 bg-slate-800 dark:bg-white rounded flex items-center justify-center text-white dark:text-slate-900"><CheckCircle2 size={14} /></div><span className="font-bold text-slate-900 dark:text-white">TaskFlow Desktop</span></div><div className="text-slate-500 dark:text-slate-400 text-sm">Â© {new Date().getFullYear()} TaskFlow Open Source. Not affiliated with Google.</div><div className="flex gap-6 text-slate-400 dark:text-slate-500"><a href="#" className="hover:text-slate-900 dark:hover:text-white"><CheckCircle2 size={20}/></a><a href="#" className="hover:text-slate-900 dark:hover:text-white"><Layout size={20}/></a></div></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6"><div className="flex items-center gap-2"><div className="w-6 h-6 bg-slate-800 dark:bg-white rounded flex items-center justify-center text-white dark:text-slate-900"><CheckCircle2 size={14} /></div><span className="font-bold text-slate-900 dark:text-white">TaskFlow Desktop</span></div><div className="text-slate-500 dark:text-slate-400 text-sm">© {new Date().getFullYear()} TaskFlow Open Source. Not affiliated with Google.</div><div className="flex gap-6 text-slate-400 dark:text-slate-500"><a href="#" className="hover:text-slate-900 dark:hover:text-white"><CheckCircle2 size={20}/></a><a href="#" className="hover:text-slate-900 dark:hover:text-white"><Layout size={20}/></a></div></div>
       </footer>
     </div>
   );
