@@ -6,9 +6,19 @@ import LoginScreen from './components/LoginScreen';
 
 export default function App() {
   const [showModal, setShowModal] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [viewMode, setViewMode] = useState('landing');
+  
+  // Dark mode with localStorage persistence
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage first
+    const savedMode = localStorage.getItem('taskflow_dark_mode');
+    if (savedMode !== null) {
+      return savedMode === 'true';
+    }
+    // Fall back to system preference
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   
   // Use custom auth hook
   const { 
@@ -47,7 +57,13 @@ export default function App() {
     };
   }, []);
 
-  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => {
+      const newMode = !prev;
+      localStorage.setItem('taskflow_dark_mode', newMode.toString());
+      return newMode;
+    });
+  };
   
   const confirmInstall = async () => {
     setShowModal(false);
@@ -90,6 +106,7 @@ export default function App() {
       <div className={`${isDarkMode ? 'dark' : ''} h-screen w-screen overflow-hidden font-sans`}>
         <AppPage 
           isDarkMode={isDarkMode} 
+          toggleDarkMode={toggleDarkMode}
           isStandalone={true} 
           onLogout={handleLogout}
           userProfile={userProfile}

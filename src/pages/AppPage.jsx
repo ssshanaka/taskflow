@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, RotateCw, Cloud, MoreVertical, List, LogOut, CheckCircle2 } from 'lucide-react';
+import { Plus, RotateCw, Cloud, MoreVertical, List, LogOut, CheckCircle2, Moon, Sun } from 'lucide-react';
 import GoogleTasksService from '../services/GoogleTasksService';
 import MockTasksService from '../services/MockTasksService';
 import DesktopTaskItem from '../components/DesktopTaskItem';
 
-const AppPage = ({ isDarkMode, isStandalone, onLogout, userProfile, authToken, isDemoMode, sessionExpiry }) => {
+const AppPage = ({ isDarkMode, toggleDarkMode, isStandalone, onLogout, userProfile, authToken, isDemoMode, sessionExpiry }) => {
   const [api, setApi] = useState(null);
   const [taskLists, setTaskLists] = useState([]);
   const [currentListId, setCurrentListId] = useState(null);
@@ -272,7 +272,22 @@ const AppPage = ({ isDarkMode, isStandalone, onLogout, userProfile, authToken, i
               {taskLists.find(l => l.id === currentListId)?.title || "Select a list"}
               {isSyncing && <RotateCw size={14} className="text-blue-500 animate-spin" />}
             </h2>
-            <div className="flex gap-4 text-slate-400">
+            <div className="flex items-center gap-3 text-slate-400">
+               {/* Dark Mode Toggle */}
+               <button
+                 onClick={toggleDarkMode}
+                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group"
+                 aria-label="Toggle dark mode"
+                 title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+               >
+                 {isDarkMode ? (
+                   <Sun size={18} className="text-slate-400 group-hover:text-yellow-500 transition-colors" />
+                 ) : (
+                   <Moon size={18} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                 )}
+               </button>
+               
+               {/* Sync Indicator */}
                <div className="relative group">
                  <span className={`absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border-2 border-white dark:border-slate-900 ${isSyncing ? 'animate-pulse' : ''}`}></span>
                  <Cloud size={18} />
@@ -280,6 +295,7 @@ const AppPage = ({ isDarkMode, isStandalone, onLogout, userProfile, authToken, i
                    {isDemoMode ? "Demo Mode (Local)" : "Google Sync Active"}
                  </div>
                </div>
+               
                <MoreVertical size={18} className="hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" />
             </div>
           </div>

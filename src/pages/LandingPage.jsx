@@ -51,6 +51,7 @@ const LandingPage = ({
                  {isAuthenticated ? (
                     <AppPage 
                       isDarkMode={isDarkMode} 
+                      toggleDarkMode={toggleDarkMode}
                       isStandalone={false} 
                       onLogout={onLogout}
                       userProfile={userProfile}
