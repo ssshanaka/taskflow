@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import useAuth from './hooks/useAuth';
 import LandingPage from './pages/LandingPage';
 import AppPage from './pages/AppPage';
+import PricingPage from './pages/PricingPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import LoginScreen from './components/LoginScreen';
 
 function AppRoutes() {
@@ -150,6 +153,34 @@ function AppRoutes() {
               />
             </div>
           )
+        } 
+      />
+
+      {/* Business Pages Routes */}
+      <Route 
+        path="/pricing" 
+        element={
+          <div className={`${isDarkMode ? 'dark' : ''} transition-colors duration-300 font-sans`}>
+            <PricingPage isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
+          </div>
+        } 
+      />
+
+      <Route 
+        path="/privacy" 
+        element={
+          <div className={`${isDarkMode ? 'dark' : ''} transition-colors duration-300 font-sans`}>
+            <PrivacyPage />
+          </div>
+        } 
+      />
+
+      <Route 
+        path="/terms" 
+        element={
+          <div className={`${isDarkMode ? 'dark' : ''} transition-colors duration-300 font-sans`}>
+            <TermsPage />
+          </div>
         } 
       />
 
