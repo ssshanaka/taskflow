@@ -1,7 +1,7 @@
 import React from 'react';
-import { CheckCircle2, Trash2, Calendar } from 'lucide-react';
+import { CheckCircle2, Trash2, Calendar, Star } from 'lucide-react';
 
-const DesktopTaskItem = ({ task, onToggle, onDelete }) => (
+const DesktopTaskItem = ({ task, onToggle, onDelete, onToggleStar }) => (
   <div className="group flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 transition-colors bg-white dark:bg-slate-900">
     <button 
       onClick={() => onToggle(task.id, task.status)}
@@ -24,12 +24,25 @@ const DesktopTaskItem = ({ task, onToggle, onDelete }) => (
         </div>
       )}
     </div>
-    <button 
-      onClick={() => onDelete(task.id)}
-      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-1"
-    >
-      <Trash2 size={14} />
-    </button>
+    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button 
+        onClick={() => onToggleStar(task.id)}
+        className={`p-1 transition-colors ${
+          task.starred 
+            ? 'text-yellow-500 hover:text-yellow-600' 
+            : 'text-slate-400 hover:text-yellow-500'
+        }`}
+        title={task.starred ? "Remove star" : "Add star"}
+      >
+        <Star size={14} className={task.starred ? 'fill-current' : ''} />
+      </button>
+      <button 
+        onClick={() => onDelete(task.id)}
+        className="text-slate-400 hover:text-red-500 transition-colors p-1"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
   </div>
 );
 

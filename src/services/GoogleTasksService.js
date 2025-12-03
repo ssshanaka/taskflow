@@ -66,7 +66,48 @@ class GoogleTasksService {
   }
 
   async getTasks(tasklistId) {
-    return this.fetch(`/lists/${tasklistId}/tasks?showCompleted=true&showHidden=true`);
+    let allItems = [];
+    let nextPageToken = null;
+    
+    do {
+      const url = `/lists/${tasklistId}/tasks?showCompleted=true&showHidden=true${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`;
+      const data = await this.fetch(url);
+      
+      if (data && data.items) {
+        allItems = [...allItems, ...data.items];
+      }
+      
+      nextPageToken = data ? data.nextPageToken : null;
+    } while (nextPageToken);
+
+    // Process all items
+    const processedItems = allItems.map(task => {
+      const isStarred = task.title.includes('[STARRED]');
+      return {
+        ...task,
+        title: task.title.replace(' [STARRED]', '').replace('[STARRED]', ''),
+        starred: isStarred
+      };
+    });
+
+    return { items: processedItems };
+  }
+
+  async fetchAllTasks(lists) {
+    const promises = lists.map(list => 
+      this.getTasks(list.id)
+        .then(data => ({ listId: list.id, tasks: data.items || [] }))
+        .catch(e => {
+          console.error(`Failed to fetch tasks for list ${list.id}`, e);
+          return { listId: list.id, tasks: [] };
+        })
+    );
+    
+    const results = await Promise.all(promises);
+    return results.reduce((acc, { listId, tasks }) => {
+      acc[listId] = tasks;
+      return acc;
+    }, {});
   }
 
   async insertTask(tasklistId, title, notes = "") {
@@ -77,11 +118,41 @@ class GoogleTasksService {
   }
 
   async updateTask(tasklistId, taskId, status) {
+    // First get the task to preserve title and other fields
+    // We can't just send status because PATCH semantics might vary or we might overwrite title if we don't include it
+    // But for Google Tasks PATCH, we can send just the fields to update.
+    // HOWEVER, if we want to preserve the [STARRED] tag, we need to know if it's there.
+    // Since we don't have the current task state here easily without fetching, 
+    // we'll assume the caller might need to handle the title if they want to change it.
+    // But for status toggle, we just want to change status.
+    // The issue is: if we just send status, does Google keep the title? Yes.
+    
     return this.fetch(`/lists/${tasklistId}/tasks/${taskId}`, {
       method: 'PATCH',
       body: JSON.stringify({
         status: status === 'completed' ? 'completed' : 'needsAction'
       })
+    });
+  }
+  
+  async updateTaskStarred(tasklistId, taskId, starred) {
+    // 1. Fetch the current task to get its full title
+    const task = await this.fetch(`/lists/${tasklistId}/tasks/${taskId}`);
+    
+    // 2. Modify the title to add/remove [STARRED]
+    let title = task.title || "";
+    const hasTag = title.includes('[STARRED]');
+    
+    if (starred && !hasTag) {
+      title = `${title} [STARRED]`;
+    } else if (!starred && hasTag) {
+      title = title.replace(' [STARRED]', '').replace('[STARRED]', '');
+    }
+    
+    // 3. Update the task with the new title
+    return this.fetch(`/lists/${tasklistId}/tasks/${taskId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title })
     });
   }
 

@@ -24,8 +24,8 @@ class MockTasksService {
     
     this.tasks = JSON.parse(localStorage.getItem('tf_tasks')) || {
       'list_1': [
-        { id: 't1', title: 'Welcome to TaskFlow', status: 'needsAction' },
-        { id: 't2', title: 'Try adding a task', status: 'needsAction' }
+        { id: 't1', title: 'Welcome to TaskFlow', status: 'needsAction', starred: false },
+        { id: 't2', title: 'Try adding a task', status: 'needsAction', starred: false }
       ],
       'list_2': []
     };
@@ -43,10 +43,18 @@ class MockTasksService {
   async getTasks(listId) {
     return { items: this.tasks[listId] || [] };
   }
+
+  async fetchAllTasks(lists) {
+    const result = {};
+    for (const list of lists) {
+      result[list.id] = this.tasks[list.id] || [];
+    }
+    return result;
+  }
   
   async insertTask(listId, title, notes = "") {
     const uniqueId = `t_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const newTask = { id: uniqueId, title, notes, status: 'needsAction' };
+    const newTask = { id: uniqueId, title, notes, status: 'needsAction', starred: false };
     
     if (!this.tasks[listId]) this.tasks[listId] = [];
     this.tasks[listId].unshift(newTask);
@@ -58,6 +66,14 @@ class MockTasksService {
     const list = this.tasks[listId] || [];
     const task = list.find(t => t.id === taskId);
     if (task) task.status = status;
+    this._save();
+    return task;
+  }
+  
+  async updateTaskStarred(listId, taskId, starred) {
+    const list = this.tasks[listId] || [];
+    const task = list.find(t => t.id === taskId);
+    if (task) task.starred = starred;
     this._save();
     return task;
   }
