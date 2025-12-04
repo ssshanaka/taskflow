@@ -456,6 +456,89 @@ const AppPage = ({
     }
   };
 
+  const handleExport = async (selectedListIds, format) => {
+    setIsSyncing(true);
+    try {
+      // 1. Fetch all tasks for selected lists individually
+      const listsToExport = taskLists.filter(l => selectedListIds.includes(l.id));
+      
+      // Fetch tasks for each list
+      const exportData = [];
+      for (const list of listsToExport) {
+        try {
+          const data = await api.getTasks(list.id);
+          exportData.push({
+            id: list.id,
+            title: list.title,
+            tasks: data.items || []
+          });
+        } catch (err) {
+          console.error(`Failed to fetch tasks for list ${list.title}`, err);
+          exportData.push({
+            id: list.id,
+            title: list.title,
+            tasks: []
+          });
+        }
+      }
+
+      console.log('Export data:', exportData);
+
+      // 2. Format and Download
+      if (format === 'json') {
+        const jsonString = JSON.stringify({ 
+          exportDate: new Date().toISOString(), 
+          lists: exportData 
+        }, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `taskflow_export_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else if (format === 'csv') {
+        // Flatten data for CSV
+        const headers = ['List Name', 'Task Title', 'Status', 'Starred', 'Notes', 'Due Date', 'Parent Task ID'];
+        const rows = [headers];
+
+        exportData.forEach(list => {
+          if (list.tasks && list.tasks.length > 0) {
+            list.tasks.forEach(task => {
+              rows.push([
+                `"${list.title.replace(/"/g, '""')}"`,
+                `"${(task.title || '').replace(/"/g, '""')}"`,
+                task.status || '',
+                task.starred ? 'Yes' : 'No',
+                `"${(task.notes || '').replace(/"/g, '""')}"`,
+                task.due ? new Date(task.due).toLocaleDateString() : '',
+                task.parent || ''
+              ]);
+            });
+          }
+        });
+
+        const csvString = rows.map(row => row.join(',')).join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `taskflow_export_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error("Export failed", e);
+      alert("Failed to export tasks. Please try again.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Loading state
   if (isLoadingLists) {
     return (
@@ -872,7 +955,12 @@ const AppPage = ({
                 accounts={accounts}
               />
 
-              <SettingsMenu isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
+              <SettingsMenu 
+                isDarkMode={isDarkMode} 
+                toggleDarkMode={toggleDarkMode} 
+                taskLists={taskLists}
+                onExport={handleExport}
+              />
             </div>
           </div>
 

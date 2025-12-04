@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Sparkles, Keyboard, Palette, Download } from 'lucide-react';
+import ExportModal from './ExportModal';
 
-const SettingsMenu = ({ isDarkMode, toggleDarkMode }) => {
+const SettingsMenu = ({ isDarkMode, toggleDarkMode, taskLists, onExport }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const menuRef = useRef(null);
   
   // Mock states for toggles - these will be connected to real functionality later
@@ -85,13 +87,26 @@ const SettingsMenu = ({ isDarkMode, toggleDarkMode }) => {
             </button>
 
             {/* Export */}
-            <button className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-slate-700 dark:text-slate-200 text-left">
+            <button 
+              onClick={() => {
+                setIsOpen(false);
+                setIsExportModalOpen(true);
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-slate-700 dark:text-slate-200 text-left"
+            >
               <Download size={18} className="text-green-500" />
               <span className="text-sm font-medium">Export to CSV/JSON</span>
             </button>
           </div>
         </div>
       )}
+
+      <ExportModal 
+        isOpen={isExportModalOpen} 
+        onClose={() => setIsExportModalOpen(false)} 
+        taskLists={taskLists}
+        onExport={onExport}
+      />
     </div>
   );
 };
