@@ -47,7 +47,7 @@ const AppPage = ({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showStarred, setShowStarred] = useState(false);
   const [isListsExpanded, setIsListsExpanded] = useState(true);
-  const [viewMode, setViewMode] = useState("list"); // 'list' or 'board'
+  const [viewMode, setViewMode] = useState("board"); // 'list' or 'board' - default to board (All Tasks)
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
 
   // Initialize API Service and load lists
@@ -68,9 +68,7 @@ const AppPage = ({
           const cachedLists = service.getCachedTaskLists();
           if (cachedLists && cachedLists.length > 0) {
             setTaskLists(cachedLists);
-            if (!currentListId) {
-              setCurrentListId(cachedLists[0].id);
-            }
+            // Don't set a specific list - let it default to board view (All Tasks)
             // Don't turn off loading yet, or maybe we can?
             // Let's keep loading true but show content if we have it?
             // Actually, for "instant" feel, we should probably stop the spinner if we have data.
@@ -91,9 +89,7 @@ const AppPage = ({
             service.saveTaskListsToCache(uniqueItems);
           }
 
-          if (uniqueItems.length > 0 && !currentListId) {
-            setCurrentListId(uniqueItems[0].id);
-          }
+          // Don't set a specific list - let it default to board view (All Tasks)
         }
       } catch (e) {
         console.error("Failed to initialize API", e);

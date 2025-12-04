@@ -1,6 +1,6 @@
 {
-  "short_name": "Workflow",
-  "name": "Workflow Desktop",
+  "short_name": "TaskFlow",
+  "name": "TaskFlow Desktop",
   "icons": [
     {
       "src": "favicon.ico",
