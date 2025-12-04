@@ -2,14 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Sparkles, Keyboard, Palette, Download } from 'lucide-react';
 import ExportModal from './ExportModal';
 
-const SettingsMenu = ({ isDarkMode, toggleDarkMode, taskLists, onExport }) => {
+const SettingsMenu = ({ isDarkMode, toggleDarkMode, taskLists, onExport, shortcutsEnabled, onToggleShortcuts }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const menuRef = useRef(null);
   
   // Mock states for toggles - these will be connected to real functionality later
   const [geminiEnabled, setGeminiEnabled] = useState(true);
-  const [shortcutsEnabled, setShortcutsEnabled] = useState(true);
 
   // Close when clicking outside
   useEffect(() => {
@@ -60,8 +59,8 @@ const SettingsMenu = ({ isDarkMode, toggleDarkMode, taskLists, onExport }) => {
 
             {/* Keyboard Shortcuts */}
             <div 
-              className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" 
-              onClick={() => setShortcutsEnabled(!shortcutsEnabled)}
+              className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group relative" 
+              onClick={() => onToggleShortcuts && onToggleShortcuts()}
             >
               <div className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
                 <Keyboard size={18} className="text-slate-500 dark:text-slate-400" />
@@ -70,6 +69,21 @@ const SettingsMenu = ({ isDarkMode, toggleDarkMode, taskLists, onExport }) => {
               {/* Toggle Switch */}
               <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ${shortcutsEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
                 <div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${shortcutsEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+              </div>
+              
+              {/* Tooltip */}
+              <div className="absolute left-full ml-2 top-0 w-64 bg-slate-900 dark:bg-slate-800 text-white text-xs p-3 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-[100] shadow-xl border border-slate-700">
+                <div className="font-semibold mb-2 text-blue-400">Available Shortcuts:</div>
+                <div className="space-y-1 text-[10px] leading-relaxed">
+                  <div><kbd className="bg-slate-700 px-1 py-0.5 rounded text-[9px]">Ctrl+?</kbd> Show shortcuts</div>
+                  <div><kbd className="bg-slate-700 px-1 py-0.5 rounded text-[9px]">Ctrl+1-9</kbd> Switch lists</div>
+                  <div><kbd className="bg-slate-700 px-1 py-0.5 rounded text-[9px]">Ctrl+N</kbd> New task</div>
+                  <div><kbd className="bg-slate-700 px-1 py-0.5 rounded text-[9px]">↑/↓</kbd> Navigate tasks</div>
+                  <div><kbd className="bg-slate-700 px-1 py-0.5 rounded text-[9px]">Space</kbd> Complete task</div>
+                  <div><kbd className="bg-slate-700 px-1 py-0.5 rounded text-[9px]">Enter</kbd> Edit task</div>
+                  <div><kbd className="bg-slate-700 px-1 py-0.5 rounded text-[9px]">Delete</kbd> Delete task</div>
+                  <div><kbd className="bg-slate-700 px-1 py-0.5 rounded text-[9px]">Esc</kbd> Close/Clear</div>
+                </div>
               </div>
             </div>
 

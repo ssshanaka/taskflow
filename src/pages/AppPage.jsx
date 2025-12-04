@@ -14,10 +14,12 @@ import {
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import DesktopTaskItem from "../components/DesktopTaskItem";
+import KeyboardShortcutsModal from "../components/KeyboardShortcutsModal";
 import ProfileMenu from "../components/ProfileMenu";
+import SettingsMenu from "../components/SettingsMenu";
 import TaskBoard from "../components/TaskBoard";
 import TaskDetailsPanel from "../components/TaskDetailsPanel";
-import SettingsMenu from "../components/SettingsMenu";
+import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import GoogleTasksService from "../services/GoogleTasksService";
 import MockTasksService from "../services/MockTasksService";
 
@@ -61,6 +63,14 @@ const AppPage = ({
   const [addingSubtaskToId, setAddingSubtaskToId] = useState(null);
   const [subtaskInput, setSubtaskInput] = useState("");
 
+  // Keyboard shortcuts states
+  const [shortcutsEnabled, setShortcutsEnabled] = useState(() => {
+    const saved = localStorage.getItem("taskflow_shortcuts_enabled");
+    return saved !== null ? saved === "true" : true; // Default enabled
+  });
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [selectedTaskIndex, setSelectedTaskIndex] = useState(-1);
+
   // Helper to build task tree
   const buildTaskTree = (tasks) => {
     const taskMap = {};
@@ -98,6 +108,126 @@ const AppPage = ({
     sortTasks(roots);
     return roots;
   };
+
+  // Toggle shortcuts
+  const toggleShortcuts = () => {
+    setShortcutsEnabled((prev) => {
+      const newValue = !prev;
+      localStorage.setItem("taskflow_shortcuts_enabled", newValue.toString());
+      return newValue;
+    });
+  };
+
+  // Get current task list for keyboard navigation
+  const getCurrentTasks = () => {
+    if (viewMode === "board") return [];
+    if (showStarred)
+      return tasks.filter((t) => t.starred && t.status !== "completed");
+    return tasks.filter((t) => t.status !== "completed");
+  };
+
+  // Keyboard shortcut handlers
+  const shortcuts = [
+    // Show shortcuts modal
+    { key: "?", ctrl: true, handler: () => setShowShortcutsModal(true) },
+    // Close modals / Clear selection
+    {
+      key: "Escape",
+      handler: () => {
+        if (showShortcutsModal) setShowShortcutsModal(false);
+        else if (selectedTask) {
+          setSelectedTask(null);
+          setSelectedTaskListId(null);
+        } else setSelectedTaskIndex(-1);
+      },
+    },
+    // Switch lists (Ctrl+1 through Ctrl+9)
+    ...Array.from({ length: 9 }, (_, i) => ({
+      key: (i + 1).toString(),
+      ctrl: true,
+      handler: () => {
+        if (taskLists[i]) {
+          setShowStarred(false);
+          setViewMode("list");
+          setCurrentListId(taskLists[i].id);
+        }
+      },
+    })),
+    // Create new task
+    {
+      key: "n",
+      ctrl: true,
+      handler: () => {
+        if (currentListId || viewMode === "list") {
+          const input = document.querySelector(
+            'input[placeholder="Add a task"]'
+          );
+          if (input) input.focus();
+        }
+      },
+    },
+    // Arrow navigation
+    {
+      key: "ArrowUp",
+      handler: () => {
+        const currentTasks = getCurrentTasks();
+        if (currentTasks.length > 0) {
+          setSelectedTaskIndex((prev) => Math.max(0, prev - 1));
+        }
+      },
+    },
+    {
+      key: "ArrowDown",
+      handler: () => {
+        const currentTasks = getCurrentTasks();
+        if (currentTasks.length > 0) {
+          setSelectedTaskIndex((prev) =>
+            Math.min(currentTasks.length - 1, prev + 1)
+          );
+        }
+      },
+    },
+    // Complete task (Space)
+    {
+      key: " ",
+      handler: () => {
+        const currentTasks = getCurrentTasks();
+        if (selectedTaskIndex >= 0 && selectedTaskIndex < currentTasks.length) {
+          const task = currentTasks[selectedTaskIndex];
+          handleToggleTask(task.id, task.status);
+        }
+      },
+    },
+    // Edit task (Enter)
+    {
+      key: "Enter",
+      handler: () => {
+        const currentTasks = getCurrentTasks();
+        if (selectedTaskIndex >= 0 && selectedTaskIndex < currentTasks.length) {
+          const task = currentTasks[selectedTaskIndex];
+          setSelectedTask(task);
+          setSelectedTaskListId(currentListId);
+        }
+      },
+    },
+    // Delete task
+    {
+      key: "Delete",
+      handler: () => {
+        const currentTasks = getCurrentTasks();
+        if (selectedTaskIndex >= 0 && selectedTaskIndex < currentTasks.length) {
+          const task = currentTasks[selectedTaskIndex];
+          if (window.confirm(`Delete task "${task.title}"?`)) {
+            handleDeleteTask(task.id);
+            setSelectedTaskIndex(-1);
+          }
+        }
+      },
+    },
+  ];
+
+  // Use keyboard shortcuts hook
+  useKeyboardShortcuts(shortcutsEnabled, shortcuts);
 
   // Initialize API Service and load lists
   useEffect(() => {
@@ -460,8 +590,10 @@ const AppPage = ({
     setIsSyncing(true);
     try {
       // 1. Fetch all tasks for selected lists individually
-      const listsToExport = taskLists.filter(l => selectedListIds.includes(l.id));
-      
+      const listsToExport = taskLists.filter((l) =>
+        selectedListIds.includes(l.id)
+      );
+
       // Fetch tasks for each list
       const exportData = [];
       for (const list of listsToExport) {
@@ -470,62 +602,78 @@ const AppPage = ({
           exportData.push({
             id: list.id,
             title: list.title,
-            tasks: data.items || []
+            tasks: data.items || [],
           });
         } catch (err) {
           console.error(`Failed to fetch tasks for list ${list.title}`, err);
           exportData.push({
             id: list.id,
             title: list.title,
-            tasks: []
+            tasks: [],
           });
         }
       }
 
-      console.log('Export data:', exportData);
+      console.log("Export data:", exportData);
 
       // 2. Format and Download
-      if (format === 'json') {
-        const jsonString = JSON.stringify({ 
-          exportDate: new Date().toISOString(), 
-          lists: exportData 
-        }, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
+      if (format === "json") {
+        const jsonString = JSON.stringify(
+          {
+            exportDate: new Date().toISOString(),
+            lists: exportData,
+          },
+          null,
+          2
+        );
+        const blob = new Blob([jsonString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        a.download = `taskflow_export_${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `taskflow_export_${
+          new Date().toISOString().split("T")[0]
+        }.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      } else if (format === 'csv') {
+      } else if (format === "csv") {
         // Flatten data for CSV
-        const headers = ['List Name', 'Task Title', 'Status', 'Starred', 'Notes', 'Due Date', 'Parent Task ID'];
+        const headers = [
+          "List Name",
+          "Task Title",
+          "Status",
+          "Starred",
+          "Notes",
+          "Due Date",
+          "Parent Task ID",
+        ];
         const rows = [headers];
 
-        exportData.forEach(list => {
+        exportData.forEach((list) => {
           if (list.tasks && list.tasks.length > 0) {
-            list.tasks.forEach(task => {
+            list.tasks.forEach((task) => {
               rows.push([
                 `"${list.title.replace(/"/g, '""')}"`,
-                `"${(task.title || '').replace(/"/g, '""')}"`,
-                task.status || '',
-                task.starred ? 'Yes' : 'No',
-                `"${(task.notes || '').replace(/"/g, '""')}"`,
-                task.due ? new Date(task.due).toLocaleDateString() : '',
-                task.parent || ''
+                `"${(task.title || "").replace(/"/g, '""')}"`,
+                task.status || "",
+                task.starred ? "Yes" : "No",
+                `"${(task.notes || "").replace(/"/g, '""')}"`,
+                task.due ? new Date(task.due).toLocaleDateString() : "",
+                task.parent || "",
               ]);
             });
           }
         });
 
-        const csvString = rows.map(row => row.join(',')).join('\n');
-        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const csvString = rows.map((row) => row.join(",")).join("\n");
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        a.download = `taskflow_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `taskflow_export_${
+          new Date().toISOString().split("T")[0]
+        }.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -955,11 +1103,13 @@ const AppPage = ({
                 accounts={accounts}
               />
 
-              <SettingsMenu 
-                isDarkMode={isDarkMode} 
-                toggleDarkMode={toggleDarkMode} 
+              <SettingsMenu
+                isDarkMode={isDarkMode}
+                toggleDarkMode={toggleDarkMode}
                 taskLists={taskLists}
                 onExport={handleExport}
+                shortcutsEnabled={shortcutsEnabled}
+                onToggleShortcuts={toggleShortcuts}
               />
             </div>
           </div>
@@ -1102,7 +1252,7 @@ const AppPage = ({
             />
           ) : (
             <>
-              <div className="flex-1 bg-gray-200 overflow-y-auto custom-scrollbar">
+              <div className="flex-1 bg-gray-100 dark:bg-slate-900 overflow-y-auto custom-scrollbar">
                 {tasks.length === 0 && !isSyncing ? (
                   <div className="flex flex-col items-center justify-center h-full text-slate-400">
                     <CheckCircle2 size={48} className="mb-4 opacity-20" />
@@ -1124,9 +1274,18 @@ const AppPage = ({
 
                       const taskTree = buildTaskTree(filteredTasks);
 
-                      const renderTaskTree = (taskNode, level = 0) => {
-                        const childElements = taskNode.children?.map((child) =>
-                          renderTaskTree(child, level + 1)
+                      const renderTaskTree = (
+                        taskNode,
+                        level = 0,
+                        index = 0
+                      ) => {
+                        const childElements = taskNode.children?.map(
+                          (child, childIdx) =>
+                            renderTaskTree(
+                              child,
+                              level + 1,
+                              index + childIdx + 1
+                            )
                         );
 
                         return (
@@ -1275,6 +1434,13 @@ const AppPage = ({
           isDarkMode={isDarkMode}
         />
       )}
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        isDarkMode={isDarkMode}
+      />
     </div>
   );
 };

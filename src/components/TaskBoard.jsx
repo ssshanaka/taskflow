@@ -86,7 +86,7 @@ const TaskBoard = ({
   };
 
   return (
-    <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-200 dark:bg-slate-900 p-6">
+    <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-100 dark:bg-slate-900 p-6">
       <div className="flex h-full gap-6">
         {lists.map((list) => {
           const listTasks = tasksByList[list.id] || [];
