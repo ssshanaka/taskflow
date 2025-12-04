@@ -217,6 +217,47 @@ class GoogleTasksService {
   saveTasksToCache(listId, tasks) {
     this.saveToCache(`tasks_${listId}`, tasks);
   }
+
+  async importTasksFromDemo(demoData) {
+    if (!demoData || !demoData.lists) return;
+
+    console.log('Starting migration of demo tasks...', demoData);
+
+    for (const list of demoData.lists) {
+      // 1. Create the list in Google Tasks
+      try {
+        const newList = await this.insertTaskList(list.title);
+        const tasks = demoData.tasks[list.id] || [];
+
+        // 2. Create all tasks in this list
+        // We reverse the array to maintain order since we insert at top usually, 
+        // but API inserts at top by default? Actually API inserts at top.
+        // So if we want to preserve order [A, B, C], we should insert C, then B, then A.
+        // Demo tasks are stored as [A, B, C] where A is top.
+        for (let i = tasks.length - 1; i >= 0; i--) {
+          const task = tasks[i];
+          try {
+            // Insert task
+            const createdTask = await this.insertTask(newList.id, task.title, task.notes || "");
+            
+            // Update status if completed
+            if (task.status === 'completed') {
+              await this.updateTask(newList.id, createdTask.id, 'completed');
+            }
+            
+            // Update starred status
+            if (task.starred) {
+              await this.updateTaskStarred(newList.id, createdTask.id, true);
+            }
+          } catch (e) {
+            console.error(`Failed to migrate task ${task.title}`, e);
+          }
+        }
+      } catch (e) {
+        console.error(`Failed to migrate list ${list.title}`, e);
+      }
+    }
+  }
 }
 
 export default GoogleTasksService;

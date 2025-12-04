@@ -7,7 +7,8 @@ const STORAGE_KEYS = {
   AUTH_TOKEN: 'taskflow_auth_token',
   USER_PROFILE: 'taskflow_user_profile',
   TOKEN_EXPIRY: 'taskflow_token_expiry',
-  IS_DEMO_MODE: 'taskflow_demo_mode'
+  IS_DEMO_MODE: 'taskflow_demo_mode',
+  ACCOUNTS: 'taskflow_accounts' // New key for storing multiple accounts
 };
 
 // Token validity: 7 days in milliseconds
@@ -21,12 +22,49 @@ const SecureStorage = {
   saveSession(token, profile, isDemoMode = false) {
     try {
       const expiryTime = Date.now() + TOKEN_VALIDITY_MS;
+      
+      // 1. Save current active session
       localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
       localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
       localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiryTime.toString());
       localStorage.setItem(STORAGE_KEYS.IS_DEMO_MODE, isDemoMode.toString());
+
+      // 2. Update accounts list (if not demo)
+      if (!isDemoMode && profile && profile.email) {
+        const accounts = this.getAccounts();
+        const updatedAccounts = {
+          ...accounts,
+          [profile.email]: {
+            token,
+            profile,
+            expiryTime
+          }
+        };
+        localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(updatedAccounts));
+      }
     } catch (e) {
       console.error('Failed to save session:', e);
+    }
+  },
+
+  // Get all stored accounts
+  getAccounts() {
+    try {
+      const accountsStr = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
+      return accountsStr ? JSON.parse(accountsStr) : {};
+    } catch (e) {
+      return {};
+    }
+  },
+
+  // Remove an account
+  removeAccount(email) {
+    try {
+      const accounts = this.getAccounts();
+      delete accounts[email];
+      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+    } catch (e) {
+      console.error('Failed to remove account:', e);
     }
   },
 
@@ -61,7 +99,7 @@ const SecureStorage = {
     }
   },
 
-  // Clear all session data
+  // Clear active session (but keep accounts list unless specified)
   clearSession() {
     try {
       localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
@@ -98,6 +136,7 @@ export default function useAuth() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpiry, setSessionExpiry] = useState(null);
+  const [accounts, setAccounts] = useState({}); // Store multiple accounts
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -122,7 +161,13 @@ export default function useAuth() {
           if (res.ok) {
             const profile = await res.json();
             
-            // Save to localStorage
+            // Check if we were in demo mode before
+            const wasInDemoMode = localStorage.getItem(STORAGE_KEYS.IS_DEMO_MODE) === 'true';
+            if (wasInDemoMode) {
+              localStorage.setItem('taskflow_sync_needed', 'true');
+            }
+            
+            // Save to localStorage (this also updates the accounts list)
             SecureStorage.saveSession(accessToken, profile, false);
             
             setAuthToken(accessToken);
@@ -130,6 +175,7 @@ export default function useAuth() {
             setIsAuthenticated(true);
             setIsDemoMode(false);
             setSessionExpiry(SecureStorage.getDaysUntilExpiry());
+            setAccounts(SecureStorage.getAccounts());
           } else {
             console.error('Failed to fetch user profile');
           }
@@ -139,6 +185,7 @@ export default function useAuth() {
       } else {
         // 2. Try to restore session from localStorage
         const savedSession = SecureStorage.loadSession();
+        setAccounts(SecureStorage.getAccounts());
         
         if (savedSession) {
           console.log('Restoring session from localStorage...');
@@ -157,13 +204,20 @@ export default function useAuth() {
   }, []);
 
   const logout = () => {
-    console.log('Logging out, clearing session...');
+    console.log('Logging out...');
+    
+    // If we are logged in, remove this account from the list
+    if (userProfile && userProfile.email) {
+      SecureStorage.removeAccount(userProfile.email);
+    }
+
     SecureStorage.clearSession();
     setIsAuthenticated(false);
     setAuthToken(null);
     setUserProfile(null);
     setIsDemoMode(false);
     setSessionExpiry(null);
+    setAccounts(SecureStorage.getAccounts()); // Update accounts list
   };
 
   const startDemo = () => {
@@ -183,6 +237,52 @@ export default function useAuth() {
     setSessionExpiry(SecureStorage.getDaysUntilExpiry());
   };
 
+  const addAccount = () => {
+    // Redirect to Google OAuth to add a NEW account
+    // We use prompt=select_account to force the account chooser
+    const redirectUri = window.location.origin + '/app';
+    const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth` +
+      `?client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=token` +
+      `&scope=${encodeURIComponent(SCOPES)}` +
+      `&include_granted_scopes=true` +
+      `&state=taskflow_auth` +
+      `&prompt=select_account`; // Force account selection
+
+    window.location.href = authUrl;
+  };
+
+  const switchAccount = (email) => {
+    // Check if we have this account stored
+    const storedAccounts = SecureStorage.getAccounts();
+    const targetAccount = storedAccounts[email];
+
+    if (targetAccount) {
+      console.log('Switching to account:', email);
+      // Restore this session
+      SecureStorage.saveSession(targetAccount.token, targetAccount.profile, false);
+      
+      setAuthToken(targetAccount.token);
+      setUserProfile(targetAccount.profile);
+      setIsAuthenticated(true);
+      setIsDemoMode(false);
+      setSessionExpiry(SecureStorage.getDaysUntilExpiry());
+      
+      // Reload page to ensure all services/components refresh with new token
+      window.location.reload();
+    } else {
+      // If not found (shouldn't happen if called correctly), add new
+      addAccount();
+    }
+  };
+
+  const signIn = () => {
+    addAccount(); // Same behavior
+  };
+
   return {
     isAuthenticated,
     authToken,
@@ -190,8 +290,12 @@ export default function useAuth() {
     isDemoMode,
     isLoading,
     sessionExpiry,
+    accounts, // Expose accounts list
     logout,
     startDemo,
+    switchAccount,
+    addAccount,
+    signIn,
     GOOGLE_CLIENT_ID
   };
 }

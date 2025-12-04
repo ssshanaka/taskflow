@@ -19,6 +19,7 @@ import DesktopTaskItem from "../components/DesktopTaskItem";
 import TaskBoard from "../components/TaskBoard";
 import GoogleTasksService from "../services/GoogleTasksService";
 import MockTasksService from "../services/MockTasksService";
+import ProfileMenu from "../components/ProfileMenu";
 
 const AppPage = ({
   isDarkMode,
@@ -29,6 +30,10 @@ const AppPage = ({
   authToken,
   isDemoMode,
   sessionExpiry,
+  onSwitchAccount,
+  onAddAccount,
+  onSignIn,
+  accounts,
 }) => {
   const [api, setApi] = useState(null);
   const [taskLists, setTaskLists] = useState([]);
@@ -106,6 +111,45 @@ const AppPage = ({
       initializeAPI();
     }
   }, [authToken, isDemoMode]);
+
+  // Check for demo sync
+  useEffect(() => {
+    const checkSync = async () => {
+      if (!api || isDemoMode) return;
+      
+      const shouldSync = localStorage.getItem('taskflow_sync_needed') === 'true';
+      if (shouldSync) {
+        setIsSyncing(true);
+        try {
+          // Get demo data
+          const mockService = new MockTasksService();
+          const demoData = mockService.exportAllTasks();
+          
+          if (demoData.lists && demoData.lists.length > 0) {
+            // Import to Google
+            await api.importTasksFromDemo(demoData);
+            
+            // Clear flag and demo data
+            localStorage.removeItem('taskflow_sync_needed');
+            localStorage.removeItem('tf_lists');
+            localStorage.removeItem('tf_tasks');
+            
+            // Refresh lists
+            const data = await api.getTaskLists();
+            if (data && data.items) {
+              setTaskLists(data.items);
+            }
+          }
+        } catch (e) {
+          console.error("Sync failed", e);
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    };
+    
+    checkSync();
+  }, [api, isDemoMode]);
 
   // Fetch tasks when list changes
   useEffect(() => {
@@ -559,41 +603,7 @@ const AppPage = ({
           )}
 
           {/* User Profile at Bottom */}
-          {!isSidebarCollapsed && (
-            <div className="mt-auto border-t border-slate-200 dark:border-slate-700 p-3">
-              <div className="flex items-center gap-3 px-2 mb-2">
-                {userProfile?.picture && (
-                  <img
-                    src={userProfile.picture}
-                    alt={userProfile.name}
-                    className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-600"
-                  />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-xs text-slate-900 dark:text-slate-200 truncate">
-                    {userProfile?.name}
-                  </div>
-                  <div className="text-slate-500 dark:text-slate-400 text-[10px] truncate">
-                    {userProfile?.email}
-                  </div>
-                  {sessionExpiry && !isDemoMode && (
-                    <div className="text-green-600 dark:text-green-400 text-[9px] mt-0.5 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                      {sessionExpiry} {sessionExpiry === 1 ? "day" : "days"}{" "}
-                      left
-                    </div>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={onLogout}
-                className="w-full px-2 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded flex items-center gap-2 transition-colors"
-              >
-                <LogOut size={14} />
-                Sign Out
-              </button>
-            </div>
-          )}
+          {/* User Profile removed from sidebar - moved to top bar */}
         </div>
 
         {/* Main Content */}
@@ -645,6 +655,17 @@ const AppPage = ({
                   {isDemoMode ? "Demo Mode (Local)" : "Google Sync Active"}
                 </div>
               </div>
+
+              {/* Profile Menu */}
+              <ProfileMenu 
+                userProfile={userProfile}
+                isDemoMode={isDemoMode}
+                onLogout={onLogout}
+                onSwitchAccount={onSwitchAccount}
+                onAddAccount={onAddAccount}
+                onSignIn={onSignIn}
+                accounts={accounts}
+              />
 
               <MoreVertical
                 size={18}

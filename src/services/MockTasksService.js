@@ -93,6 +93,13 @@ class MockTasksService {
     this._save();
     return newList;
   }
+
+  exportAllTasks() {
+    return {
+      lists: this.lists,
+      tasks: this.tasks
+    };
+  }
 }
 
 export default MockTasksService;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Download, Star, RotateCw, Layout, Zap, Smartphone, Moon, Menu, Shield, Cloud, CheckCircle2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
-import LoginScreen from '../components/LoginScreen';
+import LandingPageDemo from '../components/LandingPageDemo';
 import LaptopMockup from '../components/shared/LaptopMockup';
 import FeatureCard from '../components/shared/FeatureCard';
 import StepCard from '../components/shared/StepCard';
@@ -41,14 +41,7 @@ const LandingPage = ({
             {/* Laptop Preview */}
             <div className="w-full relative z-10 px-2 sm:px-4">
                <LaptopMockup>
-                 <div className="h-full w-full bg-slate-100 dark:bg-slate-950 relative">
-                   <div className="h-10 bg-slate-200 dark:bg-slate-800 flex items-center justify-between px-4 border-b border-slate-300 dark:border-slate-700 select-none">
-                     <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-slate-400/50" /><div className="w-3 h-3 rounded-full bg-slate-400/50" /><div className="w-3 h-3 rounded-full bg-slate-400/50" /></div>
-                     <div className="text-xs text-slate-500">Sign In</div>
-                     <div className="w-16"></div>
-                   </div>
-                   <LoginScreen onDemoLogin={onDemoLogin} hasClientId={!!googleClientId && !googleClientId.includes("YOUR_CLIENT_ID")} googleClientId={googleClientId} />
-                 </div>
+                 <LandingPageDemo isDarkMode={isDarkMode} />
                </LaptopMockup>
             </div>
           </div>
@@ -108,3 +101,4 @@ const LandingPage = ({
 };
 
 export default LandingPage;
+

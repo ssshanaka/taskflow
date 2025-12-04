@@ -35,6 +35,10 @@ function AppRoutes() {
     sessionExpiry,
     logout, 
     startDemo,
+    switchAccount,
+    addAccount,
+    signIn,
+    accounts,
     GOOGLE_CLIENT_ID 
   } = useAuth();
 
@@ -150,6 +154,10 @@ function AppRoutes() {
                 authToken={authToken}
                 isDemoMode={isDemoMode}
                 sessionExpiry={sessionExpiry}
+                onSwitchAccount={switchAccount}
+                onAddAccount={addAccount}
+                onSignIn={signIn}
+                accounts={accounts}
               />
             </div>
           )
