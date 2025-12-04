@@ -20,6 +20,7 @@ import TaskBoard from "../components/TaskBoard";
 import GoogleTasksService from "../services/GoogleTasksService";
 import MockTasksService from "../services/MockTasksService";
 import ProfileMenu from "../components/ProfileMenu";
+import TaskDetailsPanel from "../components/TaskDetailsPanel";
 
 const AppPage = ({
   isDarkMode,
@@ -54,6 +55,50 @@ const AppPage = ({
   const [isListsExpanded, setIsListsExpanded] = useState(true);
   const [viewMode, setViewMode] = useState("board"); // 'list' or 'board' - default to board (All Tasks)
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
+  const [editingListId, setEditingListId] = useState(null);
+  const [editingListValue, setEditingListValue] = useState("");
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [selectedTaskListId, setSelectedTaskListId] = useState(null);
+  const [addingSubtaskToId, setAddingSubtaskToId] = useState(null);
+  const [subtaskInput, setSubtaskInput] = useState("");
+
+  // Helper to build task tree
+  const buildTaskTree = (tasks) => {
+    const taskMap = {};
+    const roots = [];
+
+    // 1. Create map
+    tasks.forEach(task => {
+      taskMap[task.id] = { ...task, children: [] };
+    });
+
+    // 2. Build tree
+    tasks.forEach(task => {
+      if (task.parent && taskMap[task.parent]) {
+        taskMap[task.parent].children.push(taskMap[task.id]);
+      } else {
+        roots.push(taskMap[task.id]);
+      }
+    });
+
+    // 3. Sort by position
+    const sortTasks = (nodes) => {
+      nodes.sort((a, b) => {
+        if (a.position && b.position) {
+          return a.position.localeCompare(b.position);
+        }
+        return 0;
+      });
+      nodes.forEach(node => {
+        if (node.children.length > 0) {
+          sortTasks(node.children);
+        }
+      });
+    };
+
+    sortTasks(roots);
+    return roots;
+  };
 
   // Initialize API Service and load lists
   useEffect(() => {
@@ -260,7 +305,7 @@ const AppPage = ({
     setIsSyncing(true);
 
     try {
-      await api.updateTask(currentListId, taskId, newStatus);
+      await api.updateTask(currentListId, taskId, { status: newStatus });
     } catch (e) {
       console.error("Update failed", e);
       setTasks(
@@ -327,6 +372,85 @@ const AppPage = ({
       setIsAddingList(false);
     } catch (e) {
       console.error("List creation failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleUpdateList = async (listId, newTitle) => {
+    if (!newTitle.trim()) return;
+    setIsSyncing(true);
+    try {
+      await api.updateTaskList(listId, newTitle);
+      setTaskLists((prev) =>
+        prev.map((l) => (l.id === listId ? { ...l, title: newTitle } : l))
+      );
+      setEditingListId(null);
+      setEditingListValue("");
+    } catch (e) {
+      console.error("List update failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDeleteList = async (listId) => {
+    if (!window.confirm("Are you sure you want to delete this list?")) return;
+    setIsSyncing(true);
+    try {
+      await api.deleteTaskList(listId);
+      setTaskLists((prev) => prev.filter((l) => l.id !== listId));
+      // If we're viewing the deleted list, switch to board view
+      if (currentListId === listId) {
+        setCurrentListId(null);
+        setViewMode("board");
+      }
+    } catch (e) {
+      console.error("List deletion failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleUpdateTaskDetails = async (listId, taskId, updates) => {
+    setIsSyncing(true);
+    try {
+      await api.updateTask(listId, taskId, updates);
+      
+      // Refresh tasks for the current list
+      if (listId === currentListId) {
+        const data = await api.getTasks(listId);
+        setTasks(data.items || []);
+      }
+      
+      // Also refresh board view if active
+      if (viewMode === "board") {
+        const data = await api.fetchAllTasks(taskLists);
+        setAllTasksByList(data);
+      }
+    } catch (e) {
+      console.error("Task update failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleAddSubtask = async (parentId) => {
+    if (!subtaskInput.trim()) {
+      setAddingSubtaskToId(null);
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      // Pass parentId as the 5th parameter to insertTask
+      await api.insertTask(currentListId, subtaskInput, "", null, parentId);
+      const data = await api.getTasks(currentListId);
+      setTasks(data.items || []);
+      setSubtaskInput("");
+      setAddingSubtaskToId(null);
+    } catch (e) {
+      console.error("Failed to add subtask", e);
     } finally {
       setIsSyncing(false);
     }
@@ -545,32 +669,97 @@ const AppPage = ({
                       const listTaskCount = tasks.filter(
                         (t) => !showStarred
                       ).length;
+                      
+                      // Check if this list is being edited
+                      if (editingListId === list.id) {
+                        return (
+                          <form
+                            key={list.id}
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              handleUpdateList(list.id, editingListValue);
+                            }}
+                            className="px-4 py-2"
+                          >
+                            <input
+                              autoFocus
+                              type="text"
+                              value={editingListValue}
+                              onChange={(e) => setEditingListValue(e.target.value)}
+                              onBlur={() => {
+                                if (editingListValue.trim()) {
+                                  handleUpdateList(list.id, editingListValue);
+                                } else {
+                                  setEditingListId(null);
+                                }
+                              }}
+                              className="w-full px-3 py-2 text-sm rounded-lg border border-blue-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                            />
+                          </form>
+                        );
+                      }
+                      
                       return (
-                        <button
+                        <div
                           key={list.id}
-                          onClick={() => {
-                            setShowStarred(false);
-                            setViewMode("list");
-                            setCurrentListId(list.id);
-                          }}
-                          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm transition-colors ${
-                            currentListId === list.id &&
-                            !showStarred &&
-                            viewMode === "list"
-                              ? "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
-                              : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
-                          }`}
+                          className="group relative"
                         >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <CheckCircle2 size={18} className="flex-shrink-0" />
-                            <span className="truncate">{list.title}</span>
+                          <button
+                            onClick={() => {
+                              setShowStarred(false);
+                              setViewMode("list");
+                              setCurrentListId(list.id);
+                            }}
+                            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm transition-colors ${
+                              currentListId === list.id &&
+                              !showStarred &&
+                              viewMode === "list"
+                                ? "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <CheckCircle2 size={18} className="flex-shrink-0" />
+                              <span className="truncate">{list.title}</span>
+                            </div>
+                            {listTaskCount > 0 && (
+                              <span className="text-xs text-slate-500 dark:text-slate-500 ml-2">
+                                {listTaskCount}
+                              </span>
+                            )}
+                          </button>
+                          
+                          {/* List actions - shown on hover */}
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1 rounded">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingListId(list.id);
+                                setEditingListValue(list.title);
+                              }}
+                              className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400"
+                              title="Rename list"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteList(list.id);
+                              }}
+                              className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+                              title="Delete list"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
                           </div>
-                          {listTaskCount > 0 && (
-                            <span className="text-xs text-slate-500 dark:text-slate-500 ml-2">
-                              {listTaskCount}
-                            </span>
-                          )}
-                        </button>
+                        </div>
                       );
                     })}
 
@@ -708,7 +897,7 @@ const AppPage = ({
 
                   setIsSyncing(true);
                   try {
-                    await api.updateTask(listId, taskId, newStatus);
+                    await api.updateTask(listId, taskId, { status: newStatus });
                   } catch (e) {
                     console.error("Toggle failed", e);
                     // Revert
@@ -794,6 +983,20 @@ const AppPage = ({
                   }
                 }
               }}
+              onOpenDetails={(task) => {
+                // Find which list this task belongs to
+                let listId = null;
+                for (const [lid, tasks] of Object.entries(allTasksByList)) {
+                  if (tasks.find((t) => t.id === task.id)) {
+                    listId = lid;
+                    break;
+                  }
+                }
+                if (listId) {
+                  setSelectedTask(task);
+                  setSelectedTaskListId(listId);
+                }
+              }}
               isDarkMode={isDarkMode}
             />
           ) : (
@@ -810,21 +1013,69 @@ const AppPage = ({
                   </div>
                 ) : (
                   <div className="p-4 space-y-1">
-                    {/* Filter tasks based on starred view */}
-                    {(showStarred
-                      ? tasks.filter(
-                          (t) => t.starred && t.status !== "completed"
-                        )
-                      : tasks.filter((t) => t.status !== "completed")
-                    ).map((task) => (
-                      <DesktopTaskItem
-                        key={task.id}
-                        task={task}
-                        onToggle={handleToggleTask}
-                        onDelete={handleDeleteTask}
-                        onToggleStar={handleToggleStar}
-                      />
-                    ))}
+                    {/* Build task tree and render hierarchically */}
+                    {(() => {
+                      const filteredTasks = showStarred
+                        ? tasks.filter((t) => t.starred && t.status !== "completed")
+                        : tasks.filter((t) => t.status !== "completed");
+                      
+                      const taskTree = buildTaskTree(filteredTasks);
+                      
+                      const renderTaskTree = (taskNode, level = 0) => {
+                        const childElements = taskNode.children?.map(child => 
+                          renderTaskTree(child, level + 1)
+                        );
+                        
+                        return (
+                          <React.Fragment key={taskNode.id}>
+                            <DesktopTaskItem
+                              task={taskNode}
+                              level={level}
+                              onToggle={handleToggleTask}
+                              onDelete={handleDeleteTask}
+                              onToggleStar={handleToggleStar}
+                              onOpenDetails={(task) => {
+                                setSelectedTask(task);
+                                setSelectedTaskListId(currentListId);
+                              }}
+                              onAddSubtask={(taskId) => {
+                                setAddingSubtaskToId(taskId);
+                              }}
+                            >
+                              {childElements}
+                            </DesktopTaskItem>
+                            
+                            {/* Subtask input */}
+                            {addingSubtaskToId === taskNode.id && (
+                              <form 
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  handleAddSubtask(taskNode.id);
+                                }}
+                                className="ml-12 my-1"
+                                style={{ marginLeft: `${48 + level * 24}px` }}
+                              >
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  value={subtaskInput}
+                                  onChange={(e) => setSubtaskInput(e.target.value)}
+                                  onBlur={() => {
+                                    if (!subtaskInput.trim()) {
+                                      setAddingSubtaskToId(null);
+                                    }
+                                  }}
+                                  placeholder="Add subtask..."
+                                  className="w-full px-3 py-2 text-sm rounded-lg border border-blue-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                />
+                              </form>
+                            )}
+                          </React.Fragment>
+                        );
+                      };
+                      
+                      return taskTree.map(taskNode => renderTaskTree(taskNode));
+                    })()}
 
                     {tasks.some(
                       (t) =>
@@ -903,6 +1154,20 @@ const AppPage = ({
           )}
         </div>
       </div>
+      
+      {/* Task Details Panel */}
+      {selectedTask && selectedTaskListId && (
+        <TaskDetailsPanel
+          task={selectedTask}
+          listId={selectedTaskListId}
+          onClose={() => {
+            setSelectedTask(null);
+            setSelectedTaskListId(null);
+          }}
+          onUpdate={handleUpdateTaskDetails}
+          isDarkMode={isDarkMode}
+        />
+      )}
     </div>
   );
 };

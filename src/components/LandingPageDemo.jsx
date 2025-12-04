@@ -97,7 +97,7 @@ const LandingPageDemo = ({ isDarkMode }) => {
       }));
 
       try {
-        await api.updateTask(listId, taskId, newStatus);
+        await api.updateTask(listId, taskId, { status: newStatus });
       } catch (e) {
         console.error("Toggle failed", e);
         // Revert

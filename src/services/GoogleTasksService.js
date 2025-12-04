@@ -110,28 +110,40 @@ class GoogleTasksService {
     }, {});
   }
 
-  async insertTask(tasklistId, title, notes = "") {
+  async insertTask(tasklistId, title, notes = "", due = null, parent = null) {
+    const body = { title, notes };
+    if (due) {
+      body.due = due; // ISO 8601 format
+    }
+    if (parent) {
+      body.parent = parent; // Parent task ID for sub-tasks
+    }
     return this.fetch(`/lists/${tasklistId}/tasks`, {
       method: 'POST',
-      body: JSON.stringify({ title, notes })
+      body: JSON.stringify(body)
     });
   }
 
-  async updateTask(tasklistId, taskId, status) {
-    // First get the task to preserve title and other fields
-    // We can't just send status because PATCH semantics might vary or we might overwrite title if we don't include it
-    // But for Google Tasks PATCH, we can send just the fields to update.
-    // HOWEVER, if we want to preserve the [STARRED] tag, we need to know if it's there.
-    // Since we don't have the current task state here easily without fetching, 
-    // we'll assume the caller might need to handle the title if they want to change it.
-    // But for status toggle, we just want to change status.
-    // The issue is: if we just send status, does Google keep the title? Yes.
+  async updateTask(tasklistId, taskId, updates = {}) {
+    // Updates can contain: status, notes, due, title
+    const body = {};
+    
+    if (updates.status !== undefined) {
+      body.status = updates.status === 'completed' ? 'completed' : 'needsAction';
+    }
+    if (updates.notes !== undefined) {
+      body.notes = updates.notes;
+    }
+    if (updates.due !== undefined) {
+      body.due = updates.due; // null to clear, ISO 8601 to set
+    }
+    if (updates.title !== undefined) {
+      body.title = updates.title;
+    }
     
     return this.fetch(`/lists/${tasklistId}/tasks/${taskId}`, {
       method: 'PATCH',
-      body: JSON.stringify({
-        status: status === 'completed' ? 'completed' : 'needsAction'
-      })
+      body: JSON.stringify(body)
     });
   }
   
@@ -166,6 +178,19 @@ class GoogleTasksService {
     return this.fetch(`/users/@me/lists`, {
       method: 'POST',
       body: JSON.stringify({ title })
+    });
+  }
+
+  async updateTaskList(tasklistId, title) {
+    return this.fetch(`/users/@me/lists/${tasklistId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title })
+    });
+  }
+
+  async deleteTaskList(tasklistId) {
+    return this.fetch(`/users/@me/lists/${tasklistId}`, {
+      method: 'DELETE'
     });
   }
 
@@ -242,7 +267,7 @@ class GoogleTasksService {
             
             // Update status if completed
             if (task.status === 'completed') {
-              await this.updateTask(newList.id, createdTask.id, 'completed');
+              await this.updateTask(newList.id, createdTask.id, { status: 'completed' });
             }
             
             // Update starred status

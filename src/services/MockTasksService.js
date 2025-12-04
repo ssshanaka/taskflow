@@ -52,9 +52,15 @@ class MockTasksService {
     return result;
   }
   
-  async insertTask(listId, title, notes = "") {
+  async insertTask(listId, title, notes = "", due = null, parent = null) {
     const uniqueId = `t_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newTask = { id: uniqueId, title, notes, status: 'needsAction', starred: false };
+    if (due) {
+      newTask.due = due;
+    }
+    if (parent) {
+      newTask.parent = parent;
+    }
     
     if (!this.tasks[listId]) this.tasks[listId] = [];
     this.tasks[listId].unshift(newTask);
@@ -62,11 +68,16 @@ class MockTasksService {
     return newTask;
   }
   
-  async updateTask(listId, taskId, status) {
+  async updateTask(listId, taskId, updates = {}) {
     const list = this.tasks[listId] || [];
     const task = list.find(t => t.id === taskId);
-    if (task) task.status = status;
-    this._save();
+    if (task) {
+      if (updates.status !== undefined) task.status = updates.status;
+      if (updates.notes !== undefined) task.notes = updates.notes;
+      if (updates.due !== undefined) task.due = updates.due;
+      if (updates.title !== undefined) task.title = updates.title;
+      this._save();
+    }
     return task;
   }
   
@@ -92,6 +103,21 @@ class MockTasksService {
     this.tasks[newList.id] = [];
     this._save();
     return newList;
+  }
+
+  async updateTaskList(tasklistId, title) {
+    const list = this.lists.find(l => l.id === tasklistId);
+    if (list) {
+      list.title = title;
+      this._save();
+    }
+    return list;
+  }
+
+  async deleteTaskList(tasklistId) {
+    this.lists = this.lists.filter(l => l.id !== tasklistId);
+    delete this.tasks[tasklistId];
+    this._save();
   }
 
   exportAllTasks() {

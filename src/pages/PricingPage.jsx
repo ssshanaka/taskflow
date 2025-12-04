@@ -4,23 +4,50 @@ import { Link } from "react-router-dom";
 
 const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
   useEffect(() => {
-    // Load PayPal SDK
-    const script = document.createElement("script");
-    script.src =
-      "https://www.paypal.com/sdk/js?client-id=ARJuNcjZ4ekcXMY0FsjMt8jLBFJ4f3FrRTqLQu1t8e9g4O8a4oIyS0uaFeboLpOGNxXRs_TmFxw8Z2DF&currency=USD";
-    script.async = true;
-    document.body.appendChild(script);
+    const loadPayPal = () => {
+      if (window.paypal) {
+        renderPayPalButton("paypal-button-pro", "4.99", "Pro");
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src =
+        "https://www.paypal.com/sdk/js?client-id=ARJuNcjZ4ekcXMY0FsjMt8jLBFJ4f3FrRTqLQu1t8e9g4O8a4oIyS0uaFeboLpOGNxXRs_TmFxw8Z2DF&currency=USD";
+      script.async = true;
+      script.onload = () => {
+        renderPayPalButton("paypal-button-pro", "4.99", "Pro");
+      };
+      script.onerror = () => {
+        console.error("Failed to load PayPal SDK");
+      };
+      document.body.appendChild(script);
+    };
+
+    loadPayPal();
 
     return () => {
-      // Cleanup script on unmount
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
+      // Optional: Cleanup script if needed, but keeping it might be safer for caching
+      const script = document.querySelector('script[src*="paypal.com/sdk/js"]');
+      if (script) {
+        script.remove();
       }
+      // Note: window.paypal remains even after script removal
     };
   }, []);
 
   const renderPayPalButton = (containerId, amount, planName) => {
-    if (window.paypal) {
+    if (!window.paypal) return;
+
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.warn(`Container #${containerId} not found for PayPal button`);
+      return;
+    }
+
+    // Clear any existing buttons
+    container.innerHTML = "";
+
+    try {
       window.paypal
         .Buttons({
           createOrder: (data, actions) => {
@@ -46,22 +73,14 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
             alert("Payment failed. Please try again or contact support.");
           },
         })
-        .render(`#${containerId}`);
+        .render(`#${containerId}`)
+        .catch((err) => {
+          console.error("PayPal Render Error:", err);
+        });
+    } catch (err) {
+      console.error("PayPal Initialization Error:", err);
     }
   };
-
-  useEffect(() => {
-    // Render PayPal buttons after SDK loads
-    const checkPayPal = setInterval(() => {
-      if (window.paypal) {
-        clearInterval(checkPayPal);
-        renderPayPalButton("paypal-button-pro", "4.99", "Pro");
-        renderPayPalButton("paypal-button-team", "19.00", "Team");
-      }
-    }, 100);
-
-    return () => clearInterval(checkPayPal);
-  }, []);
 
   const pricingTiers = [
     {
@@ -86,7 +105,7 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
     {
       tier: "Pro",
       price: "$4.99",
-      period: "/ month",
+      period: "/ one-time",
       description: "For power users who want more",
       features: [
         "Everything in Personal",
@@ -102,26 +121,6 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
       recommended: true,
       paypal: true,
       paypalId: "paypal-button-pro",
-    },
-    {
-      tier: "Team",
-      price: "$19",
-      period: "/ month",
-      description: "For teams and organizations",
-      features: [
-        "Up to 5 Pro Accounts",
-        "Centralized Billing",
-        "Team Onboarding",
-        "Priority Features",
-        "Account Manager",
-        "Custom Domain Support",
-        "Advanced Analytics",
-        "SLA Guarantee",
-      ],
-      cta: "Buy with PayPal",
-      recommended: false,
-      paypal: true,
-      paypalId: "paypal-button-team",
     },
   ];
 
@@ -204,14 +203,14 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
           </div>
 
           {/* Pricing Cards */}
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-20">
             {pricingTiers.map((plan, idx) => (
               <div
                 key={idx}
                 className={`relative rounded-2xl p-8 ${
                   plan.recommended
                     ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-2xl shadow-blue-500/40 scale-105"
-                    : "bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+                    : "bg-[#d5d5d5] dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
                 }`}
               >
                 {plan.recommended && (
