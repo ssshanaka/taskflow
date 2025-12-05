@@ -57,10 +57,25 @@ const DesktopTaskItem = ({
           <p className={`text-sm truncate ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
             {task.title}
           </p>
-          {task.due && (
+          {(task.due || task._metadata) && (
             <div className="flex items-center gap-1 mt-0.5 text-[10px] text-blue-600 dark:text-blue-400 font-medium">
               <Calendar size={10} />
-              {new Date(task.due).toLocaleDateString()}
+              {task.due ? new Date(task.due).toLocaleDateString() : ''}
+              {(() => {
+                if (task._metadata) {
+                  try {
+                    const match = task._metadata.match(/\[TFCAL\](.*?)\[\/TFCAL\]/);
+                    if (match) {
+                      const meta = JSON.parse(match[1]);
+                      if (meta._st) {
+                         const timeStr = new Date(meta._st).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
+                         return task.due ? ` • ${timeStr}` : timeStr;
+                      }
+                    }
+                  } catch (e) {}
+                }
+                return null;
+              })()}
             </div>
           )}
           {task.notes && (

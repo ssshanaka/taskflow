@@ -292,8 +292,8 @@ const AppPage = ({
           let endTime = parsedTask.endTime;
 
           if (startTime && !endTime) {
-            // Use duration or default to 1 hour
-            const durationMs = (parsedTask.duration || 60) * 60 * 1000;
+            // Use duration or default to 1 minute (for task timer)
+            const durationMs = parsedTask.duration ? parsedTask.duration * 60 * 1000 : 60 * 1000;
             const start = new Date(startTime);
             endTime = new Date(start.getTime() + durationMs).toISOString();
           }
@@ -364,9 +364,19 @@ const AppPage = ({
       setError(null);
 
       try {
-        const service = isDemoMode
-          ? new MockTasksService()
-          : new GoogleTasksService(authToken);
+        let service;
+        
+        if (isDemoMode) {
+          service = new MockTasksService();
+        } else {
+          service = new GoogleTasksService(authToken);
+          // Initialize Calendar Service for Sync
+          if (authToken) {
+             const calService = new GoogleCalendarService(authToken);
+             service.setCalendarService(calService);
+             setCalendarApi(calService);
+          }
+        }
 
         setApi(service);
 

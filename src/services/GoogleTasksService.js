@@ -6,6 +6,11 @@ class GoogleTasksService {
   constructor(token) {
     this.token = token;
     this.baseUrl = 'https://tasks.googleapis.com/tasks/v1';
+    this.calendarService = null;
+  }
+
+  setCalendarService(service) {
+    this.calendarService = service;
   }
 
   async fetch(endpoint, options = {}) {
@@ -137,21 +142,76 @@ class GoogleTasksService {
   }
 
   async updateTask(tasklistId, taskId, updates = {}) {
-    // If updating notes, we must preserve any existing metadata
-    // We fetch the current task to get the metadata
-    let preservedMetadata = "";
+    // Sync Logic: Prepare metadata and calendar updates
+    let preservedMetadataStr = "";
+    let metadataObj = null;
+    let currentRawNotes = ""; // To retrieve user notes if not in updates
     
-    if (updates.notes !== undefined) {
+    // If we need to sync (Calendar Service exists) OR we are updating notes (need to preserve metadata)
+    // we must fetch the current task.
+    const needsFetch = this.calendarService || updates.notes !== undefined || updates.due !== undefined;
+    
+    if (needsFetch) {
        try {
          const currentTask = await this.fetch(`/lists/${tasklistId}/tasks/${taskId}`);
          if (currentTask && currentTask.notes) {
+            currentRawNotes = currentTask.notes;
             const match = currentTask.notes.match(/\[TFCAL\](.*?)\[\/TFCAL\]/);
             if (match) {
-               preservedMetadata = match[0];
+               preservedMetadataStr = match[0];
+               try {
+                  metadataObj = JSON.parse(match[1]);
+               } catch (e) { /* ignore parse error */ }
             }
          }
        } catch (e) {
-         console.warn("Failed to fetch task for metadata preservation", e);
+         console.warn("Sync: Failed to fetch task details", e);
+       }
+    }
+
+    // Handle Metadata Updates (e.g. Date/Time Change)
+    if (metadataObj && (updates.due || updates.startTime) && metadataObj._st) {
+       try {
+          // Calculate new times
+          const oldStart = new Date(metadataObj._st);
+          
+          let newStart;
+          if (updates.startTime) {
+             // Explicit start time update (ISO string)
+             newStart = new Date(updates.startTime);
+          } else {
+             // Date-only update (keep existing time)
+             const newDateBase = new Date(updates.due);
+             newStart = new Date(newDateBase);
+             newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), oldStart.getSeconds());
+          }
+          
+          // Calculate duration
+          const oldEnd = metadataObj._et ? new Date(metadataObj._et) : new Date(oldStart.getTime() + 60*60*1000);
+          const duration = oldEnd.getTime() - oldStart.getTime();
+          const newEnd = new Date(newStart.getTime() + duration);
+          
+          // Update Metadata Object
+          metadataObj._st = newStart.toISOString();
+          metadataObj._et = newEnd.toISOString();
+          
+          // Re-serialize
+          preservedMetadataStr = `[TFCAL]${JSON.stringify(metadataObj)}[/TFCAL]`;
+          
+          // Force notes update to save new metadata
+          // Use provided updates.notes OR extract from currentRawNotes
+          const userNotes = updates.notes !== undefined ? updates.notes : currentRawNotes.replace(preservedMetadataStr, '').replace(/\[TFCAL\].*?\[\/TFCAL\]/, '').trim();
+          updates.notes = userNotes; // modify updates object to trigger notes logic below
+          
+          // Queue Calendar Update
+          if (this.calendarService && metadataObj._cal) {
+             this.calendarService.updateEvent(metadataObj._cal, {
+                startTime: metadataObj._st,
+                endTime: metadataObj._et
+             }).catch(e => console.error("Sync: Failed to move calendar event", e));
+          }
+       } catch (e) {
+          console.error("Sync: Date calculation failed", e);
        }
     }
 
@@ -161,19 +221,37 @@ class GoogleTasksService {
     if (updates.status !== undefined) {
       body.status = updates.status === 'completed' ? 'completed' : 'needsAction';
     }
+    
+    // Construct Notes
     if (updates.notes !== undefined) {
       // Prepend metadata if it exists AND the new notes don't already contain it
-      if (preservedMetadata && !updates.notes.includes('[TFCAL]')) {
-        body.notes = `${preservedMetadata}\n${updates.notes}`;
+      if (preservedMetadataStr && !updates.notes.includes('[TFCAL]')) {
+        body.notes = `${preservedMetadataStr}\n${updates.notes}`;
       } else {
         body.notes = updates.notes;
       }
+    } else if (preservedMetadataStr && updates.due) {
+       // We updated metadata due to date change, but user didn't change notes.
+       // We forced updates.notes above, so this block might be redundant but safe.
     }
+    
     if (updates.due !== undefined) {
-      body.due = updates.due; // null to clear, ISO 8601 to set
+      body.due = updates.due; 
     }
     if (updates.title !== undefined) {
       body.title = updates.title;
+    }
+    
+    // Sync: Update Calendar Content (Title/Notes)
+    if (this.calendarService && metadataObj && metadataObj._cal) {
+       const calUpdates = {};
+       if (updates.title) calUpdates.title = updates.title;
+       if (updates.notes !== undefined) calUpdates.notes = updates.notes; // Clean user notes
+       
+       if (Object.keys(calUpdates).length > 0) {
+          this.calendarService.updateEvent(metadataObj._cal, calUpdates)
+            .catch(e => console.error("Sync: Failed to update calendar content", e));
+       }
     }
     
     return this.fetch(`/lists/${tasklistId}/tasks/${taskId}`, {
@@ -204,6 +282,20 @@ class GoogleTasksService {
   }
 
   async deleteTask(tasklistId, taskId) {
+    // Sync: Delete calendar event if linked
+    if (this.calendarService) {
+      try {
+        const task = await this.fetch(`/lists/${tasklistId}/tasks/${taskId}`);
+        const linkedEvent = this.getLinkedEventId(task);
+        if (linkedEvent && linkedEvent.eventId) {
+          console.log("Sync: Deleting linked calendar event", linkedEvent.eventId);
+          await this.calendarService.deleteEvent(linkedEvent.eventId);
+        }
+      } catch (e) {
+        console.warn("Sync: Failed to delete linked calendar event", e);
+      }
+    }
+
     return this.fetch(`/lists/${tasklistId}/tasks/${taskId}`, {
       method: 'DELETE'
     });

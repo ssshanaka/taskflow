@@ -12,10 +12,18 @@ const TaskDetailsPanel = ({ task, listId, onClose, onUpdate, isDarkMode }) => {
     if (task.due) {
       const d = new Date(task.due);
       setDate(d.toISOString().split('T')[0]);
-      // Extract time if present (and not 00:00:00 which is default for date-only)
-      // Google Tasks API usually strips time, so this might be empty unless we store it elsewhere.
-      // For now, we'll try to parse it from the due string if it exists.
-      if (task.due.includes('T') && !task.due.includes('T00:00:00')) {
+      
+      // Try to get time from metadata first (source of truth for Calendar tasks)
+      if (task._metadata) {
+         try {
+            const meta = JSON.parse(task._metadata.match(/\[TFCAL\](.*?)\[\/TFCAL\]/)[1]);
+            if (meta._st) {
+               const start = new Date(meta._st);
+               setTime(start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+            }
+         } catch(e) { console.warn("Failed to parse metadata time", e); }
+      } else if (task.due.includes('T') && !task.due.includes('T00:00:00')) {
+         // Fallback to due date time
          setTime(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
       }
     }
@@ -38,6 +46,12 @@ const TaskDetailsPanel = ({ task, listId, onClose, onUpdate, isDarkMode }) => {
         notes,
         due: dueDateTime
       };
+      
+      // If time is set, explicit signal to update startTime (for Calendar)
+      if (time && dueDateTime) {
+         updates.startTime = dueDateTime;
+      }
+      
       await onUpdate(listId, task.id, updates);
       onClose();
     } catch (e) {
