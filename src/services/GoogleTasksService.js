@@ -83,10 +83,22 @@ class GoogleTasksService {
     // Process all items
     const processedItems = allItems.map(task => {
       const isStarred = task.title.includes('[STARRED]');
+      
+      // Process Notes (hide metadata)
+      let notes = task.notes || "";
+      let metadata = null;
+      const metaMatch = notes.match(/\[TFCAL\](.*?)\[\/TFCAL\]/);
+      if (metaMatch) {
+         metadata = metaMatch[0];
+         notes = notes.replace(metaMatch[0], '').trim();
+      }
+
       return {
         ...task,
         title: task.title.replace(' [STARRED]', '').replace('[STARRED]', ''),
-        starred: isStarred
+        starred: isStarred,
+        notes: notes,
+        _metadata: metadata // Store hidden metadata
       };
     });
 
@@ -125,6 +137,24 @@ class GoogleTasksService {
   }
 
   async updateTask(tasklistId, taskId, updates = {}) {
+    // If updating notes, we must preserve any existing metadata
+    // We fetch the current task to get the metadata
+    let preservedMetadata = "";
+    
+    if (updates.notes !== undefined) {
+       try {
+         const currentTask = await this.fetch(`/lists/${tasklistId}/tasks/${taskId}`);
+         if (currentTask && currentTask.notes) {
+            const match = currentTask.notes.match(/\[TFCAL\](.*?)\[\/TFCAL\]/);
+            if (match) {
+               preservedMetadata = match[0];
+            }
+         }
+       } catch (e) {
+         console.warn("Failed to fetch task for metadata preservation", e);
+       }
+    }
+
     // Updates can contain: status, notes, due, title
     const body = {};
     
@@ -132,7 +162,12 @@ class GoogleTasksService {
       body.status = updates.status === 'completed' ? 'completed' : 'needsAction';
     }
     if (updates.notes !== undefined) {
-      body.notes = updates.notes;
+      // Prepend metadata if it exists AND the new notes don't already contain it
+      if (preservedMetadata && !updates.notes.includes('[TFCAL]')) {
+        body.notes = `${preservedMetadata}\n${updates.notes}`;
+      } else {
+        body.notes = updates.notes;
+      }
     }
     if (updates.due !== undefined) {
       body.due = updates.due; // null to clear, ISO 8601 to set
@@ -282,6 +317,66 @@ class GoogleTasksService {
         console.error(`Failed to migrate list ${list.title}`, e);
       }
     }
+  }
+
+  /**
+   * Link a calendar event ID to a task by storing it in notes
+   * @param {string} tasklistId - Task list ID
+   * @param {string} taskId - Task ID
+   * @param {string} eventId - Calendar event ID
+   * @param {string} userNotes - User's actual notes
+   * @param {string} startTime - Start time
+   * @param {string} endTime - End time
+   */
+  async linkCalendarEvent(tasklistId, taskId, eventId, userNotes = "", startTime = null, endTime = null) {
+    const metadata = {
+      _cal: eventId, // Hidden calendar link
+      _st: startTime, // Start time
+      _et: endTime,   // End time
+    };
+    
+    // Store metadata as JSON at the start of notes, prefixed with special marker
+    const metadataStr = `[TFCAL]${JSON.stringify(metadata)}[/TFCAL]`;
+    const notes = userNotes ? `${metadataStr}\n${userNotes}` : metadataStr;
+    
+    return this.updateTask(tasklistId, taskId, { notes });
+  }
+
+  /**
+   * Get linked calendar event ID from task
+   * @param {Object} task - Task object
+   * @returns {Object|null} - { eventId, startTime, endTime, userNotes }
+   */
+  getLinkedEventId(task) {
+    if (!task || !task.notes) return null;
+    
+    const match = task.notes.match(/\[TFCAL\](.*?)\[\/TFCAL\]/);
+    if (!match) return null;
+    
+    try {
+      const metadata = JSON.parse(match[1]);
+      const userNotes = task.notes.replace(match[0], '').trim().replace(/^\n/, '');
+      
+      return {
+        eventId: metadata._cal || null,
+        startTime: metadata._st || null,
+        endTime: metadata._et || null,
+        userNotes: userNotes
+      };
+    } catch (e) {
+      console.error('Failed to parse calendar metadata', e);
+      return null;
+    }
+  }
+
+  /**
+   * Remove calendar link from task
+   * @param {string} tasklistId - Task list ID
+   * @param {string} taskId - Task ID
+   * @param {string} userNotes - Preserve user's notes
+   */
+  async unlinkCalendarEvent(tasklistId, taskId, userNotes = "") {
+    return this.updateTask(tasklistId, taskId, { notes: userNotes });
   }
 }
 

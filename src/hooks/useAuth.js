@@ -251,7 +251,7 @@ export default function useAuth() {
     // We use prompt=select_account to force the account chooser
     const redirectUri = window.location.origin + "/app";
     const SCOPES =
-      "https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";
+      "https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";
 
     const authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth` +
@@ -261,7 +261,7 @@ export default function useAuth() {
       `&scope=${encodeURIComponent(SCOPES)}` +
       `&include_granted_scopes=true` +
       `&state=taskflow_auth` +
-      `&prompt=select_account`; // Force account selection
+      `&prompt=consent select_account`; // Force permission review and account selection
 
     window.location.href = authUrl;
   };

@@ -87,7 +87,22 @@ Instructions:
                       due: {
                         type: "string",
                         description:
-                          "Due date and time in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ). Include time if mentioned by user. Return null if no date/time mentioned.",
+                          "Due date (date only in YYYY-MM-DD format). Use this for tasks without specific times.",
+                      },
+                      startTime: {
+                        type: "string",
+                        description:
+                          "Start time in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ). Extract this if user specifies a time like 'at 2pm', 'from 3pm', etc.",
+                      },
+                      endTime: {
+                        type: "string",
+                        description:
+                          "End time in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ). Extract this if user specifies an end time like 'until 4pm', 'to 5:30pm', etc.",
+                      },
+                      duration: {
+                        type: "number",
+                        description:
+                          "Duration in minutes. Extract this if user specifies 'for 1 hour', 'for 30 minutes', etc. Default to 60 minutes if time mentioned but no duration/end time given.",
                       },
                     },
                     required: ["title"],
@@ -124,6 +139,9 @@ Instructions:
         title: args.title || text,
         notes: args.notes || "",
         due: args.due || null,
+        startTime: args.startTime || null,
+        endTime: args.endTime || null,
+        duration: args.duration || null,
       };
     } catch (error) {
       console.error("Gemini API error:", error);

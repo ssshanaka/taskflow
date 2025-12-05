@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertCircle, Monitor } from 'lucide-react';
 
-const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
 const LoginScreen = ({ onDemoLogin, hasClientId, googleClientId }) => {
   const handleGoogleLogin = () => {
@@ -13,7 +13,8 @@ const LoginScreen = ({ onDemoLogin, hasClientId, googleClientId }) => {
       `&response_type=token` +
       `&scope=${encodeURIComponent(SCOPES)}` +
       `&include_granted_scopes=true` +
-      `&state=taskflow_auth`;
+      `&state=taskflow_auth` +
+      `&prompt=consent select_account`;
 
     // Redirect the user to Google
     window.location.href = authUrl;

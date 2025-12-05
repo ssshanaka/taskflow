@@ -24,6 +24,7 @@ import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import GeminiService from "../services/GeminiService";
 import GoogleTasksService from "../services/GoogleTasksService";
 import MockTasksService from "../services/MockTasksService";
+import GoogleCalendarService from "../services/GoogleCalendarService";
 
 const AppPage = ({
   isDarkMode,
@@ -40,6 +41,7 @@ const AppPage = ({
   accounts,
 }) => {
   const [api, setApi] = useState(null);
+  const [calendarApi, setCalendarApi] = useState(null);
   const [taskLists, setTaskLists] = useState([]);
   const [currentListId, setCurrentListId] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -272,13 +274,74 @@ const AppPage = ({
         currentListId
       );
 
-      // Create task using parsed data
-      await api.insertTask(
+      console.log('Parsed task from Gemini:', parsedTask);
+
+      // Create task using parsed data (date only, no time)
+      const createdTask = await api.insertTask(
         currentListId,
         parsedTask.title,
         parsedTask.notes || "",
-        parsedTask.due || null
+        (parsedTask.due ? new Date(parsedTask.due).toISOString() : (parsedTask.startTime ? new Date(parsedTask.startTime).toISOString() : null))
       );
+
+      // If task has time information, create calendar event
+      if (parsedTask.startTime || parsedTask.endTime) {
+        try {
+          // Calculate end time if not provided
+          let startTime = parsedTask.startTime;
+          let endTime = parsedTask.endTime;
+
+          if (startTime && !endTime) {
+            // Use duration or default to 1 hour
+            const durationMs = (parsedTask.duration || 60) * 60 * 1000;
+            const start = new Date(startTime);
+            endTime = new Date(start.getTime() + durationMs).toISOString();
+          }
+
+          if (startTime && endTime) {
+            // Initialize calendar API if not already done
+            if (!calendarApi && authToken) {
+              const cal = new GoogleCalendarService(authToken);
+              await cal.initialize();
+              setCalendarApi(cal);
+            }
+
+            // Create calendar event
+            if (calendarApi || authToken) {
+              const calendar = calendarApi || new GoogleCalendarService(authToken);
+              if (!calendarApi) {
+                await calendar.initialize();
+                setCalendarApi(calendar);
+              }
+
+              const eventId = await calendar.createEvent(
+                createdTask,
+                startTime,
+                endTime
+              );
+
+              // Link calendar event to task
+              await api.linkCalendarEvent(
+                currentListId,
+                createdTask.id,
+                eventId,
+                parsedTask.notes || "",
+                startTime,
+                endTime
+              );
+
+              console.log('Created and linked calendar event:', eventId);
+            }
+          }
+        } catch (calError) {
+          console.error('Failed to create calendar event:', calError);
+          if (calError.message.includes('403') || calError.message.includes('permission')) {
+             alert("Calendar permission missing. Please Sign Out and Sign In again to grant access.");
+          } else {
+             alert(`Task created, but failed to add to Calendar: ${calError.message}`);
+          }
+        }
+      }
 
       // Reload tasks
       const data = await api.getTasks(currentListId);
