@@ -2,13 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Sparkles, Keyboard, Palette, Download } from 'lucide-react';
 import ExportModal from './ExportModal';
 
-const SettingsMenu = ({ isDarkMode, toggleDarkMode, taskLists, onExport, shortcutsEnabled, onToggleShortcuts }) => {
+const SettingsMenu = ({ isDarkMode, toggleDarkMode, taskLists, onExport, shortcutsEnabled, onToggleShortcuts, geminiEnabled, onToggleGemini }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const menuRef = useRef(null);
-  
-  // Mock states for toggles - these will be connected to real functionality later
-  const [geminiEnabled, setGeminiEnabled] = useState(true);
 
   // Close when clicking outside
   useEffect(() => {
@@ -45,7 +42,7 @@ const SettingsMenu = ({ isDarkMode, toggleDarkMode, taskLists, onExport, shortcu
             {/* Gemini Support */}
             <div 
               className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" 
-              onClick={() => setGeminiEnabled(!geminiEnabled)}
+              onClick={() => onToggleGemini && onToggleGemini()}
             >
               <div className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
                 <Sparkles size={18} className="text-blue-500" />

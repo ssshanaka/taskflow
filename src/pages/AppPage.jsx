@@ -8,6 +8,7 @@ import {
   Moon,
   Plus,
   RotateCw,
+  Sparkles,
   Star,
   Sun,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import SettingsMenu from "../components/SettingsMenu";
 import TaskBoard from "../components/TaskBoard";
 import TaskDetailsPanel from "../components/TaskDetailsPanel";
 import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
+import GeminiService from "../services/GeminiService";
 import GoogleTasksService from "../services/GoogleTasksService";
 import MockTasksService from "../services/MockTasksService";
 
@@ -71,6 +73,15 @@ const AppPage = ({
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [selectedTaskIndex, setSelectedTaskIndex] = useState(-1);
 
+  // Gemini AI states
+  const [geminiEnabled, setGeminiEnabled] = useState(() => {
+    const saved = localStorage.getItem("taskflow_gemini_enabled");
+    return saved !== null ? saved === "true" : false; // Default disabled
+  });
+  const [geminiInput, setGeminiInput] = useState("");
+  const [isGeminiProcessing, setIsGeminiProcessing] = useState(false);
+  const [geminiService] = useState(() => new GeminiService());
+
   // Helper to build task tree
   const buildTaskTree = (tasks) => {
     const taskMap = {};
@@ -114,6 +125,15 @@ const AppPage = ({
     setShortcutsEnabled((prev) => {
       const newValue = !prev;
       localStorage.setItem("taskflow_shortcuts_enabled", newValue.toString());
+      return newValue;
+    });
+  };
+
+  // Toggle Gemini
+  const toggleGemini = () => {
+    setGeminiEnabled((prev) => {
+      const newValue = !prev;
+      localStorage.setItem("taskflow_gemini_enabled", newValue.toString());
       return newValue;
     });
   };
@@ -228,6 +248,51 @@ const AppPage = ({
 
   // Use keyboard shortcuts hook
   useKeyboardShortcuts(shortcutsEnabled, shortcuts);
+
+  // Handle Gemini AI input
+  const handleGeminiInput = async (e) => {
+    e.preventDefault();
+    if (!geminiInput.trim() || !currentListId) {
+      alert("Please select a list first");
+      return;
+    }
+
+    if (!geminiService.isConfigured()) {
+      alert(
+        "Gemini API is not configured. Please add REACT_APP_GEMINI_API_KEY to your .env file."
+      );
+      return;
+    }
+
+    setIsGeminiProcessing(true);
+    try {
+      // Parse input with Gemini
+      const parsedTask = await geminiService.parseTaskInput(
+        geminiInput,
+        currentListId
+      );
+
+      // Create task using parsed data
+      await api.insertTask(
+        currentListId,
+        parsedTask.title,
+        parsedTask.notes || "",
+        parsedTask.due || null
+      );
+
+      // Reload tasks
+      const data = await api.getTasks(currentListId);
+      setTasks(data.items || []);
+
+      // Clear input
+      setGeminiInput("");
+    } catch (error) {
+      console.error("Gemini task creation failed:", error);
+      alert(`Failed to create task: ${error.message}`);
+    } finally {
+      setIsGeminiProcessing(false);
+    }
+  };
 
   // Initialize API Service and load lists
   useEffect(() => {
@@ -822,26 +887,52 @@ const AppPage = ({
               )}
             </div>
 
-            {/* Create Button */}
-            {!isSidebarCollapsed && (
-              <button
-                onClick={() => {
-                  setShowStarred(false);
-                  setCurrentListId(taskLists[0]?.id || null);
-                  // Focus on input after a short delay
-                  setTimeout(() => {
-                    const input = document.querySelector(
-                      'input[placeholder="Add a task"]'
-                    );
-                    if (input) input.focus();
-                  }, 100);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-full text-slate-700 dark:text-slate-200 font-medium transition-colors shadow-sm"
-              >
-                <Plus size={20} />
-                <span>Create</span>
-              </button>
-            )}
+            {/* Create Button / Gemini Input */}
+            {!isSidebarCollapsed &&
+              (geminiEnabled ? (
+                <form onSubmit={handleGeminiInput} className="w-full">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={geminiInput}
+                      onChange={(e) => setGeminiInput(e.target.value)}
+                      disabled={isGeminiProcessing || !currentListId}
+                      placeholder={
+                        currentListId
+                          ? "Ask AI to create a task..."
+                          : "Select a list first"
+                      }
+                      className="w-full pl-10 pr-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-full text-sm text-slate-700 dark:text-black font-medium transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
+                    />
+                    <div className="absolute left-3 top-3 text-blue-600 dark:text-blue-400">
+                      {isGeminiProcessing ? (
+                        <RotateCw size={20} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={20} />
+                      )}
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowStarred(false);
+                    setCurrentListId(taskLists[0]?.id || null);
+                    setViewMode("list");
+                    // Focus on input after a short delay
+                    setTimeout(() => {
+                      const input = document.querySelector(
+                        'input[placeholder="Add a task"]'
+                      );
+                      if (input) input.focus();
+                    }, 100);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-full text-slate-700 dark:text-slate-200 font-medium transition-colors shadow-sm"
+                >
+                  <Plus size={20} />
+                  <span>Create</span>
+                </button>
+              ))}
           </div>
 
           {/* Navigation */}
@@ -1110,6 +1201,8 @@ const AppPage = ({
                 onExport={handleExport}
                 shortcutsEnabled={shortcutsEnabled}
                 onToggleShortcuts={toggleShortcuts}
+                geminiEnabled={geminiEnabled}
+                onToggleGemini={toggleGemini}
               />
             </div>
           </div>
