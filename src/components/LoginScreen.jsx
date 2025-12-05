@@ -14,7 +14,7 @@ const LoginScreen = ({ onDemoLogin, hasClientId, googleClientId }) => {
       `&scope=${encodeURIComponent(SCOPES)}` +
       `&include_granted_scopes=true` +
       `&state=taskflow_auth` +
-      `&prompt=consent select_account`;
+      `&prompt=select_account`;
 
     // Redirect the user to Google
     window.location.href = authUrl;

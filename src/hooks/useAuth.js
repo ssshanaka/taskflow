@@ -261,7 +261,7 @@ export default function useAuth() {
       `&scope=${encodeURIComponent(SCOPES)}` +
       `&include_granted_scopes=true` +
       `&state=taskflow_auth` +
-      `&prompt=consent select_account`; // Force permission review and account selection
+      `&prompt=select_account`; // Force account selection
 
     window.location.href = authUrl;
   };
