@@ -250,13 +250,13 @@ const LandingPage = ({
               onDownload={() => setShowModal(true)}
               features={[
                 "Everything in Personal",
+                "Gemini Integration",
                 "Multiple Google Accounts",
                 "Custom Themes",
                 "Priority Support",
                 "Early Access Features",
                 "Advanced Keyboard Shortcuts",
                 "Export to CSV/JSON",
-                "Recurring Task Templates",
               ]}
             />
           </div>
