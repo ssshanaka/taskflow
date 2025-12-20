@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 
-const GOOGLE_CLIENT_ID =
-  "824225213786-fv4vohfsuoh041fr802ds1abesdgc6go.apps.googleusercontent.com";
+
+const GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID ?? getEnvGoogleClientID();
+
+function getEnvGoogleClientID() {
+  return process.env.GOOGLE_CLIENT_ID;
+}
 
 // Storage keys
 const STORAGE_KEYS = {
