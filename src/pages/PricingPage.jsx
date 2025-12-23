@@ -3,10 +3,18 @@ import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 
 const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
+  const [donationAmount, setDonationAmount] = React.useState("5.00");
+  // Use a ref to keep track of the current donation amount for the PayPal SDK
+  const donationAmountRef = React.useRef(donationAmount);
+
+  useEffect(() => {
+    donationAmountRef.current = donationAmount;
+  }, [donationAmount]);
+
   useEffect(() => {
     const loadPayPal = () => {
       if (window.paypal) {
-        renderPayPalButton("paypal-button-pro", "4.99", "Pro");
+        renderPayPalButton("paypal-button-donate");
         return;
       }
 
@@ -15,7 +23,7 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
         "https://www.paypal.com/sdk/js?client-id=ARJuNcjZ4ekcXMY0FsjMt8jLBFJ4f3FrRTqLQu1t8e9g4O8a4oIyS0uaFeboLpOGNxXRs_TmFxw8Z2DF&currency=USD";
       script.async = true;
       script.onload = () => {
-        renderPayPalButton("paypal-button-pro", "4.99", "Pro");
+        renderPayPalButton("paypal-button-donate");
       };
       script.onerror = () => {
         console.error("Failed to load PayPal SDK");
@@ -26,21 +34,28 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
     loadPayPal();
 
     return () => {
-      // Optional: Cleanup script if needed, but keeping it might be safer for caching
-      const script = document.querySelector('script[src*="paypal.com/sdk/js"]');
-      if (script) {
-        script.remove();
-      }
-      // Note: window.paypal remains even after script removal
+      // Optional: Cleanup script if needed
+      // const script = document.querySelector('script[src*="paypal.com/sdk/js"]');
+      // if (script) script.remove();
     };
   }, []);
 
-  const renderPayPalButton = (containerId, amount, planName) => {
+  // Re-render button when amount changes logic? 
+  // Actually the PayPal SDK reads the value at the time of click usually if we access it right, 
+  // or we need to re-render the button. The simplest way with vanilla JS SDK is to re-render 
+  // if we want to ensure it captures new state, OR use a ref inside the createOrder callback 
+  // which is defined ONCE.
+  // The createOrder function is defined in the initial renderPayPalButton call.
+  // If we assume renderPayPalButton is called once on mount, the closures might capture stale state.
+  // USING REF fixes this.
+
+  const renderPayPalButton = (containerId) => {
     if (!window.paypal) return;
 
     const container = document.getElementById(containerId);
     if (!container) {
-      console.warn(`Container #${containerId} not found for PayPal button`);
+      // Container might not be ready yet if React is rendering
+      setTimeout(() => renderPayPalButton(containerId), 100);
       return;
     }
 
@@ -50,13 +65,19 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
     try {
       window.paypal
         .Buttons({
+          style: {
+            layout: 'horizontal',
+            color: 'blue',
+            shape: 'rect',
+            label: 'donate'
+          },
           createOrder: (data, actions) => {
             return actions.order.create({
               purchase_units: [
                 {
-                  description: `TaskFlow Desktop - ${planName}`,
+                  description: "TaskFlow Donation",
                   amount: {
-                    value: amount,
+                    value: donationAmountRef.current || "1.00", // Fallback to 1 if empty
                   },
                 },
               ],
@@ -65,12 +86,12 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
           onApprove: async (data, actions) => {
             const order = await actions.order.capture();
             alert(
-              `Thank you for your purchase! Order ID: ${order.id}\n\nPlease save this order ID and contact support to activate your ${planName} plan.`
+              `Thank you for your donation! Order ID: ${order.id}`
             );
           },
           onError: (err) => {
             console.error("PayPal Error:", err);
-            alert("Payment failed. Please try again or contact support.");
+            alert("Donation failed. Please try again.");
           },
         })
         .render(`#${containerId}`)
@@ -80,6 +101,11 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
     } catch (err) {
       console.error("PayPal Initialization Error:", err);
     }
+  };
+
+  const handleProClick = (e) => {
+    e.preventDefault();
+    alert("Pro plan will be available soon! Until then, enjoy some of our Premium features for free.");
   };
 
   const pricingTiers = [
@@ -117,10 +143,11 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
         "Advanced Keyboard Shortcuts",
         "Export to CSV/JSON",
       ],
-      cta: "Buy with PayPal",
+      cta: "Upgrade to Pro", // Changed from "Buy with PayPal"
+      ctaLink: "#",
       recommended: true,
-      paypal: true,
-      paypalId: "paypal-button-pro",
+      paypal: false, // Changed to false so we render our button logic
+      onClick: handleProClick, // Custom handler
     },
   ];
 
@@ -290,9 +317,10 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
                 ) : (
                   <Link
                     to={plan.ctaLink}
+                    onClick={plan.onClick}
                     className={`block w-full py-3 px-6 rounded-lg font-semibold text-center transition-all ${
                       plan.recommended
-                        ? "bg-white text-blue-600 hover:bg-blue-50"
+                        ? "bg-white text-blue-600 hover:bg-blue-50 cursor-pointer"
                         : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100"
                     }`}
                   >
@@ -301,6 +329,41 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
                 )}
               </div>
             ))}
+          </div>
+
+          {/* Donation Section */}
+          <div className="max-w-4xl mx-auto mb-20 bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 text-center">
+            <div className="inline-flex items-center justify-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-full mb-4">
+               <Star size={24} className="text-blue-600 dark:text-blue-400 fill-current" />
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Support TaskFlow</h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-2xl mx-auto">
+              TaskFlow is open source and free to use. If you enjoy using it, consider making a donation to support development and server costs.
+            </p>
+            
+            <div className="flex flex-col items-center gap-6 max-w-sm mx-auto">
+              <div className="w-full">
+                <label htmlFor="donation-amount" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 text-left">
+                  Donation Amount ($)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-slate-500 dark:text-slate-400">$</span>
+                  </div>
+                  <input
+                    type="number"
+                    id="donation-amount"
+                    min="1"
+                    step="0.01"
+                    value={donationAmount}
+                    onChange={(e) => setDonationAmount(e.target.value)}
+                    className="block w-full pl-7 pr-3 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div id="paypal-button-donate" className="w-full min-h-[45px] relative z-0"></div>
+            </div>
           </div>
         </div>
       </section>

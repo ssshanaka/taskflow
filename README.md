@@ -63,11 +63,16 @@ To enable Google OAuth sign-in and Calendar integration, you need to configure t
 For better security and easier configuration, we use environment variables.
 
 1. Create a file named `.env` in the root directory (same level as `package.json`).
-2. Add your Google Client ID to the file:
+2. Add the following variables to the file (you can use the same values for both prefixes to ensure compatibility):
 
 ```env
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
 REACT_APP_GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
 
+# Gemini AI Configuration (Get key from https://aistudio.google.com/app/apikey)
+VITE_GEMINI_API_KEY=your-gemini-api-key
+REACT_APP_GEMINI_API_KEY=your-gemini-api-key
 ```
 
 > **Note**: This keeps your credentials separate from the codebase.
