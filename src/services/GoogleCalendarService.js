@@ -42,7 +42,7 @@ class GoogleCalendarService {
       );
 
       if (existingCalendar) {
-        console.log('Found existing TaskFlow calendar:', existingCalendar.id);
+        // console.log('Found existing TaskFlow calendar:', existingCalendar.id);
         return existingCalendar.id;
       }
 
@@ -135,7 +135,7 @@ class GoogleCalendarService {
       }
 
       const createdEvent = await response.json();
-      console.log('Created calendar event:', createdEvent.id);
+      // console.log('Created calendar event:', createdEvent.id);
       return createdEvent.id;
     } catch (error) {
       console.error('Error creating calendar event:', error);

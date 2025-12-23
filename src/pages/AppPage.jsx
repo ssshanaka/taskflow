@@ -330,7 +330,7 @@ const AppPage = ({
                 endTime
               );
 
-              console.log('Created and linked calendar event:', eventId);
+              // console.log('Created and linked calendar event:', eventId);
             }
           }
         } catch (calError) {

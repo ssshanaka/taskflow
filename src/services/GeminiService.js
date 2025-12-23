@@ -51,13 +51,15 @@ class GeminiService {
 
 Current date and time: ${now.toISOString()} (${now.toLocaleString('en-US', { timeZone: userTimezone })})
 User timezone: ${userTimezone}
-
 User request: "${text}"
 
 Instructions:
 - Extract a clear, concise task title
 - Extract any additional notes or context
-- If a date and/or time is mentioned, convert it to ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ)
+- If a date and/or time is mentioned, YOU MUST convert it to UTC (ISO 8601 format: YYYY-MM-DDTHH:mm:ss.sssZ) using the User's timezone.
+- CRITICAL: User input times are in ${userTimezone}. Convert them to UTC.
+  - Example: If user is in "Asia/Kolkata" (UTC+05:30) and says "6pm", the output should be "12:30:00.000Z".
+  - Example: If user is in "America/New_York" (EDT, UTC-04:00) and says "6pm", the output should be "22:00:00.000Z".
 - Pay special attention to time indicators like "at 2pm", "by 3:30", "tomorrow at noon", etc.
 - For relative dates like "tomorrow", "next Friday", calculate the actual date based on the current date
 - For times without dates, assume today's date
