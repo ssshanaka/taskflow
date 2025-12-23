@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 
 
-const GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID ?? getEnvGoogleClientID();
-
-function getEnvGoogleClientID() {
-  return process.env.GOOGLE_CLIENT_ID;
-}
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
 
 // Storage keys
 const STORAGE_KEYS = {
