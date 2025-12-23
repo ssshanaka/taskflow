@@ -66,7 +66,8 @@ For better security and easier configuration, we use environment variables.
 2. Add your Google Client ID to the file:
 
 ```env
-GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
+REACT_APP_GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
+
 ```
 
 > **Note**: This keeps your credentials separate from the codebase.
