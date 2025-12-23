@@ -18,9 +18,15 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
         return;
       }
 
+      const paypalClientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
+      if (!paypalClientId) {
+        console.error("PayPal Client ID not found in environment variables");
+        return;
+      }
+
       const script = document.createElement("script");
       script.src =
-        "https://www.paypal.com/sdk/js?client-id=ARJuNcjZ4ekcXMY0FsjMt8jLBFJ4f3FrRTqLQu1t8e9g4O8a4oIyS0uaFeboLpOGNxXRs_TmFxw8Z2DF&currency=USD";
+        `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&currency=USD`;
       script.async = true;
       script.onload = () => {
         renderPayPalButton("paypal-button-donate");
@@ -66,8 +72,8 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
       window.paypal
         .Buttons({
           style: {
-            layout: 'horizontal',
-            color: 'blue',
+            layout: 'vertical',
+            color: 'gold',
             shape: 'rect',
             label: 'donate'
           },

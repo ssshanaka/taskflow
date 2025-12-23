@@ -73,6 +73,9 @@ REACT_APP_GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
 # Gemini AI Configuration (Get key from https://aistudio.google.com/app/apikey)
 VITE_GEMINI_API_KEY=your-gemini-api-key
 REACT_APP_GEMINI_API_KEY=your-gemini-api-key
+
+# PayPal Configuration (Get key from Developer Dashboard)
+REACT_APP_PAYPAL_CLIENT_ID=your-paypal-client-id
 ```
 
 > **Note**: This keeps your credentials separate from the codebase.
