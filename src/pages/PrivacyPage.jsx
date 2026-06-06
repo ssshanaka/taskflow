@@ -1,13 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ArrowLeft, Shield, Database, Users, Globe, Lock, Mail } from 'lucide-react';
+import { useSEO } from '../hooks/useSEO';
 
 const PrivacyPage = () => {
   const lastUpdated = "December 3, 2025";
 
-  React.useEffect(() => {
-    document.title = "Privacy Policy | TaskFlow Desktop";
-  }, []);
+  useSEO({
+    title: "Privacy Policy",
+    description: "Read the TaskFlow Desktop Privacy Policy to understand how we protect your data."
+  });
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">

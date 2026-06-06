@@ -12,6 +12,7 @@ import {
   Zap,
 } from "lucide-react";
 import React from "react";
+import { useSEO } from "../hooks/useSEO";
 import LandingPageDemo from "../components/LandingPageDemo";
 import Navbar from "../components/Navbar";
 import FeatureCard from "../components/shared/FeatureCard";
@@ -30,9 +31,23 @@ const LandingPage = ({
   onDemoLogin,
   googleClientId,
 }) => {
-  React.useEffect(() => {
-    document.title = "TaskFlow – Google Tasks Desktop Client & PWA App";
-  }, []);
+  useSEO({
+    title: "Google Tasks Desktop Client & PWA App",
+    description: "Experience the clean, focused task management you love. Install TaskFlow as a native app on Windows, macOS, or Linux directly from your browser.",
+    canonicalUrl: "https://taskflow.shanaka.dev/",
+    schema: {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "TaskFlow",
+      "operatingSystem": "Any",
+      "applicationCategory": "ProductivityApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+  });
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">

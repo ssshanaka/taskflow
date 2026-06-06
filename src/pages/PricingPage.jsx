@@ -1,15 +1,13 @@
 import { ArrowLeft, CheckCircle2, HelpCircle, Star } from "lucide-react";
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useSEO } from "../hooks/useSEO";
 
 const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
   const [donationAmount, setDonationAmount] = React.useState("5.00");
   // Use a ref to keep track of the current donation amount for the PayPal SDK
   const donationAmountRef = React.useRef(donationAmount);
 
-  useEffect(() => {
-    document.title = "Pricing & Donations | TaskFlow Desktop";
-  }, []);
 
   useEffect(() => {
     donationAmountRef.current = donationAmount;
@@ -184,6 +182,23 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
         "Yes! We offer 50% off Pro plans for students and nonprofits. Contact support@taskflow.app with verification (e.g., .edu email or nonprofit registration) to receive your discount code.",
     },
   ];
+
+  useSEO({
+    title: "Pricing & Donations",
+    description: "Choose your TaskFlow plan or support us with a donation.",
+    schema: {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": faqs.map(faq => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    }
+  });
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">

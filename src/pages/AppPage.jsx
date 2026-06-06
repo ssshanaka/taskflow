@@ -25,6 +25,7 @@ import GeminiService from "../services/GeminiService";
 import GoogleTasksService from "../services/GoogleTasksService";
 import MockTasksService from "../services/MockTasksService";
 import GoogleCalendarService from "../services/GoogleCalendarService";
+import { useSEO } from "../hooks/useSEO";
 
 const AppPage = ({
   isDarkMode,
@@ -44,9 +45,7 @@ const AppPage = ({
   const [calendarApi, setCalendarApi] = useState(null);
   const [taskLists, setTaskLists] = useState([]);
 
-  useEffect(() => {
-    document.title = "App | TaskFlow Desktop";
-  }, []);
+  useSEO({ title: "App" });
   const [currentListId, setCurrentListId] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [allTasksByList, setAllTasksByList] = useState({}); // For board view
