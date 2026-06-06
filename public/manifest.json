@@ -1,6 +1,7 @@
 {
   "short_name": "TaskFlow",
   "name": "TaskFlow Desktop",
+  "description": "A beautiful, modern Google Tasks desktop client with instant sync, offline support, dark mode, and keyboard shortcuts.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
+  "theme_color": "#2563eb",
   "background_color": "#ffffff"
 }

@@ -12,6 +12,7 @@ import {
   Zap,
 } from "lucide-react";
 import React from "react";
+import { Link } from "react-router-dom";
 import { useSEO } from "../hooks/useSEO";
 import LandingPageDemo from "../components/LandingPageDemo";
 import Navbar from "../components/Navbar";
@@ -35,22 +36,32 @@ const LandingPage = ({
     title: "Google Tasks Desktop Client & PWA App",
     description: "Experience the clean, focused task management you love. Install TaskFlow as a native app on Windows, macOS, or Linux directly from your browser.",
     canonicalUrl: "https://taskflow.shanaka.dev/",
+    ogImage: "https://taskflow.shanaka.dev/og-image.png",
     schema: {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      "name": "TaskFlow",
-      "operatingSystem": "Any",
+      "name": "TaskFlow Desktop",
+      "url": "https://taskflow.shanaka.dev",
+      "description": "A beautiful, modern Google Tasks desktop client with instant sync, offline support, dark mode, and keyboard shortcuts. Install as a PWA on any platform.",
+      "operatingSystem": "Windows, macOS, Linux, ChromeOS, Android",
       "applicationCategory": "ProductivityApplication",
+      "applicationSubCategory": "Task Management",
+      "author": {
+        "@type": "Organization",
+        "name": "TaskFlow",
+        "url": "https://taskflow.shanaka.dev"
+      },
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD"
-      }
+      },
+      "screenshot": "https://taskflow.shanaka.dev/og-image.png"
     }
   });
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
+    <main className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
       <Navbar
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
@@ -297,17 +308,14 @@ const LandingPage = ({
             � {new Date().getFullYear()} TaskFlow Open Source. Not affiliated
             with Google.
           </div>
-          <div className="flex gap-6 text-slate-400 dark:text-slate-500">
-            <a href="#root" className="hover:text-slate-900 dark:hover:text-white">
-              <CheckCircle2 size={20} />
-            </a>
-            <a href="#root" className="hover:text-slate-900 dark:hover:text-white">
-              <Layout size={20} />
-            </a>
+          <div className="flex gap-6 text-sm font-medium text-slate-600 dark:text-slate-400">
+            <Link to="/pricing" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Pricing</Link>
+            <Link to="/privacy" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Terms</Link>
           </div>
         </div>
       </footer>
-    </div>
+    </main>
   );
 };
 

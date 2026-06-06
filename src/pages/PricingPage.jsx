@@ -185,7 +185,9 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
 
   useSEO({
     title: "Pricing & Donations",
-    description: "Choose your TaskFlow plan or support us with a donation.",
+    description: "Choose your TaskFlow plan or support us with a donation. Free forever with optional Pro upgrade.",
+    canonicalUrl: "https://taskflow.shanaka.dev/pricing",
+    ogImage: "https://taskflow.shanaka.dev/og-image.png",
     schema: {
       "@context": "https://schema.org",
       "@type": "FAQPage",
@@ -201,7 +203,7 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
   });
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
+    <main className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -465,7 +467,7 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
           </div>
         </div>
       </footer>
-    </div>
+    </main>
   );
 };
 

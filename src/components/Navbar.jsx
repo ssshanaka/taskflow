@@ -12,6 +12,7 @@ const Navbar = ({ isDarkMode, toggleDarkMode, onInstall }) => {
         <Link
           to="/"
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          aria-label="TaskFlow Desktop Home"
         >
           <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
             <CheckCircle2 size={20} />

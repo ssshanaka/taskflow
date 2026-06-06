@@ -8,11 +8,12 @@ const PrivacyPage = () => {
 
   useSEO({
     title: "Privacy Policy",
-    description: "Read the TaskFlow Desktop Privacy Policy to understand how we protect your data."
+    description: "Read the TaskFlow Desktop Privacy Policy to understand how we protect your data.",
+    canonicalUrl: "https://taskflow.shanaka.dev/privacy"
   });
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
+    <main className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -51,7 +52,7 @@ const PrivacyPage = () => {
       </section>
 
       {/* Content */}
-      <section className="py-12">
+      <article className="py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="prose prose-slate dark:prose-invert max-w-none">
             
@@ -256,7 +257,7 @@ const PrivacyPage = () => {
 
           </div>
         </div>
-      </section>
+      </article>
 
       {/* Footer */}
       <footer className="bg-slate-50 dark:bg-slate-900 py-12 border-t border-slate-200 dark:border-slate-800">
@@ -276,7 +277,7 @@ const PrivacyPage = () => {
           </div>
         </div>
       </footer>
-    </div>
+    </main>
   );
 };
 
