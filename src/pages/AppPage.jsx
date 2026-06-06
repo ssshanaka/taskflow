@@ -422,6 +422,7 @@ const AppPage = ({
     if (authToken || isDemoMode) {
       initializeAPI();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authToken, isDemoMode]);
 
   // Check for demo sync
@@ -495,7 +496,7 @@ const AppPage = ({
     };
 
     loadTasks();
-  }, [api, currentListId]);
+  }, [api, currentListId, isDemoMode]);
 
   // Fetch all tasks for board view
   useEffect(() => {
@@ -539,6 +540,7 @@ const AppPage = ({
     };
 
     loadAllTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, viewMode, taskLists.length]); // Depend on taskLists.length to trigger when lists are loaded
 
   const handleAddTask = async (e) => {

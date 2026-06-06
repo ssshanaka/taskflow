@@ -12,6 +12,60 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
   }, [donationAmount]);
 
   useEffect(() => {
+    const renderPayPalButton = (containerId) => {
+      if (!window.paypal) return;
+
+      const container = document.getElementById(containerId);
+      if (!container) {
+        // Container might not be ready yet if React is rendering
+        setTimeout(() => renderPayPalButton(containerId), 100);
+        return;
+      }
+
+      // Clear any existing buttons
+      container.innerHTML = "";
+
+      try {
+        window.paypal
+          .Buttons({
+            style: {
+              layout: 'vertical',
+              color: 'gold',
+              shape: 'rect',
+              label: 'donate'
+            },
+            createOrder: (data, actions) => {
+              return actions.order.create({
+                purchase_units: [
+                  {
+                    description: "TaskFlow Donation",
+                    amount: {
+                      value: donationAmountRef.current || "1.00", // Fallback to 1 if empty
+                    },
+                  },
+                ],
+              });
+            },
+            onApprove: async (data, actions) => {
+              const order = await actions.order.capture();
+              alert(
+                `Thank you for your donation! Order ID: ${order.id}`
+              );
+            },
+            onError: (err) => {
+              console.error("PayPal Error:", err);
+              alert("Donation failed. Please try again.");
+            },
+          })
+          .render(`#${containerId}`)
+          .catch((err) => {
+            console.error("PayPal Render Error:", err);
+          });
+      } catch (err) {
+        console.error("PayPal Initialization Error:", err);
+      }
+    };
+
     const loadPayPal = () => {
       if (window.paypal) {
         renderPayPalButton("paypal-button-donate");
@@ -45,69 +99,6 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
       // if (script) script.remove();
     };
   }, []);
-
-  // Re-render button when amount changes logic? 
-  // Actually the PayPal SDK reads the value at the time of click usually if we access it right, 
-  // or we need to re-render the button. The simplest way with vanilla JS SDK is to re-render 
-  // if we want to ensure it captures new state, OR use a ref inside the createOrder callback 
-  // which is defined ONCE.
-  // The createOrder function is defined in the initial renderPayPalButton call.
-  // If we assume renderPayPalButton is called once on mount, the closures might capture stale state.
-  // USING REF fixes this.
-
-  const renderPayPalButton = (containerId) => {
-    if (!window.paypal) return;
-
-    const container = document.getElementById(containerId);
-    if (!container) {
-      // Container might not be ready yet if React is rendering
-      setTimeout(() => renderPayPalButton(containerId), 100);
-      return;
-    }
-
-    // Clear any existing buttons
-    container.innerHTML = "";
-
-    try {
-      window.paypal
-        .Buttons({
-          style: {
-            layout: 'vertical',
-            color: 'gold',
-            shape: 'rect',
-            label: 'donate'
-          },
-          createOrder: (data, actions) => {
-            return actions.order.create({
-              purchase_units: [
-                {
-                  description: "TaskFlow Donation",
-                  amount: {
-                    value: donationAmountRef.current || "1.00", // Fallback to 1 if empty
-                  },
-                },
-              ],
-            });
-          },
-          onApprove: async (data, actions) => {
-            const order = await actions.order.capture();
-            alert(
-              `Thank you for your donation! Order ID: ${order.id}`
-            );
-          },
-          onError: (err) => {
-            console.error("PayPal Error:", err);
-            alert("Donation failed. Please try again.");
-          },
-        })
-        .render(`#${containerId}`)
-        .catch((err) => {
-          console.error("PayPal Render Error:", err);
-        });
-    } catch (err) {
-      console.error("PayPal Initialization Error:", err);
-    }
-  };
 
   const handleProClick = (e) => {
     e.preventDefault();

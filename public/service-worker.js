@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-globals */
 const CACHE_NAME = 'taskflow-v2';
 const ASSETS_TO_CACHE = [
   '/',

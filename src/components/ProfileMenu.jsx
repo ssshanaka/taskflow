@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LogOut, UserPlus, Settings, ExternalLink, Monitor, ChevronDown, X, Check } from 'lucide-react';
+import { LogOut, UserPlus } from 'lucide-react';
 
 const ProfileMenu = ({ 
   userProfile, 

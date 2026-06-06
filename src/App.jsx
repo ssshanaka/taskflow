@@ -31,7 +31,6 @@ function AppRoutes() {
     authToken, 
     userProfile, 
     isDemoMode, 
-    isLoading,
     sessionExpiry,
     logout, 
     startDemo,

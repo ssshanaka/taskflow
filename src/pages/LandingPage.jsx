@@ -1,4 +1,4 @@
-﻿import {
+import {
   CheckCircle2,
   Cloud,
   Download,
@@ -279,10 +279,10 @@ const LandingPage = ({
             with Google.
           </div>
           <div className="flex gap-6 text-slate-400 dark:text-slate-500">
-            <a href="#" className="hover:text-slate-900 dark:hover:text-white">
+            <a href="#root" className="hover:text-slate-900 dark:hover:text-white">
               <CheckCircle2 size={20} />
             </a>
-            <a href="#" className="hover:text-slate-900 dark:hover:text-white">
+            <a href="#root" className="hover:text-slate-900 dark:hover:text-white">
               <Layout size={20} />
             </a>
           </div>
