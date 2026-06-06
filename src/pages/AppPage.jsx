@@ -43,6 +43,10 @@ const AppPage = ({
   const [api, setApi] = useState(null);
   const [calendarApi, setCalendarApi] = useState(null);
   const [taskLists, setTaskLists] = useState([]);
+
+  useEffect(() => {
+    document.title = "App | TaskFlow Desktop";
+  }, []);
   const [currentListId, setCurrentListId] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [allTasksByList, setAllTasksByList] = useState({}); // For board view

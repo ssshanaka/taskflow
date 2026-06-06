@@ -30,6 +30,10 @@ const LandingPage = ({
   onDemoLogin,
   googleClientId,
 }) => {
+  React.useEffect(() => {
+    document.title = "TaskFlow – Google Tasks Desktop Client & PWA App";
+  }, []);
+
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white selection:bg-blue-100 dark:selection:bg-blue-900 transition-colors duration-300">
       <Navbar

@@ -5,6 +5,10 @@ import { CheckCircle2, ArrowLeft, Shield, Database, Users, Globe, Lock, Mail } f
 const PrivacyPage = () => {
   const lastUpdated = "December 3, 2025";
 
+  React.useEffect(() => {
+    document.title = "Privacy Policy | TaskFlow Desktop";
+  }, []);
+
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
       {/* Navbar */}

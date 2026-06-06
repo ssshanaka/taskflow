@@ -8,6 +8,10 @@ const PricingPage = ({ isDarkMode, toggleDarkMode }) => {
   const donationAmountRef = React.useRef(donationAmount);
 
   useEffect(() => {
+    document.title = "Pricing & Donations | TaskFlow Desktop";
+  }, []);
+
+  useEffect(() => {
     donationAmountRef.current = donationAmount;
   }, [donationAmount]);
 

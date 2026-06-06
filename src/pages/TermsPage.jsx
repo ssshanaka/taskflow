@@ -5,6 +5,10 @@ import { CheckCircle2, ArrowLeft, FileText, AlertTriangle, Scale, Shield } from 
 const TermsPage = () => {
   const lastUpdated = "December 3, 2025";
 
+  React.useEffect(() => {
+    document.title = "Terms of Service | TaskFlow Desktop";
+  }, []);
+
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
       {/* Navbar */}
