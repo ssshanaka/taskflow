@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, MoreVertical, Plus } from "lucide-react";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import DesktopTaskItem from "./DesktopTaskItem";
 
 const TaskBoard = ({
@@ -59,6 +59,25 @@ const TaskBoard = ({
     return roots;
   };
 
+  const boardData = useMemo(
+    () =>
+      lists.map((list) => {
+        const listTasks = tasksByList[list.id] || [];
+        const activeTasks = listTasks.filter((t) => t.status !== "completed");
+        const completedTasks = listTasks.filter(
+          (t) => t.status === "completed"
+        );
+
+        return {
+          list,
+          activeTree: buildTaskTree(activeTasks),
+          completedTasks,
+          completedTree: buildTaskTree(completedTasks),
+        };
+      }),
+    [lists, tasksByList]
+  );
+
   // Recursive task renderer
   const renderTaskTree = (taskNode, level = 0) => {
     const childElements = taskNode.children?.map((child) =>
@@ -88,17 +107,8 @@ const TaskBoard = ({
   return (
     <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-100 dark:bg-slate-900 p-6">
       <div className="flex h-full gap-6">
-        {lists.map((list) => {
-          const listTasks = tasksByList[list.id] || [];
-          const activeTasks = listTasks.filter((t) => t.status !== "completed");
-          const completedTasks = listTasks.filter(
-            (t) => t.status === "completed"
-          );
+        {boardData.map(({ list, activeTree, completedTasks, completedTree }) => {
           const isExpanded = expandedLists[list.id];
-
-          // Build trees
-          const activeTree = buildTaskTree(activeTasks);
-          const completedTree = buildTaskTree(completedTasks);
 
           return (
             <div
@@ -164,4 +174,4 @@ const TaskBoard = ({
   );
 };
 
-export default TaskBoard;
+export default React.memo(TaskBoard);
