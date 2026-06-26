@@ -12,7 +12,13 @@ import {
   Star,
   Sun,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link } from "react-router-dom";
 import DesktopTaskItem from "../components/DesktopTaskItem";
 import KeyboardShortcutsModal from "../components/KeyboardShortcutsModal";
@@ -69,6 +75,7 @@ const AppPage = ({
   const [selectedTaskListId, setSelectedTaskListId] = useState(null);
   const [addingSubtaskToId, setAddingSubtaskToId] = useState(null);
   const [subtaskInput, setSubtaskInput] = useState("");
+  const addTaskInputRef = useRef(null);
 
   // Keyboard shortcuts states
   const [shortcutsEnabled, setShortcutsEnabled] = useState(() => {
@@ -124,6 +131,51 @@ const AppPage = ({
     sortTasks(roots);
     return roots;
   };
+
+  const visibleTasks = useMemo(() => {
+    const filtered = showStarred
+      ? tasks.filter((t) => t.starred && t.status !== "completed")
+      : tasks.filter((t) => t.status !== "completed");
+    return buildTaskTree(filtered);
+  }, [showStarred, tasks]);
+
+  const completedTasks = useMemo(
+    () =>
+      showStarred
+        ? tasks.filter((t) => t.starred && t.status === "completed")
+        : tasks.filter((t) => t.status === "completed"),
+    [showStarred, tasks]
+  );
+
+  const listTaskCounts = useMemo(() => {
+    const counts = {};
+    taskLists.forEach((list) => {
+      counts[list.id] = (allTasksByList[list.id] || []).filter(
+        (task) => task.status !== "completed"
+      ).length;
+    });
+    return counts;
+  }, [allTasksByList, taskLists]);
+
+  const currentTaskList = useMemo(
+    () => taskLists.find((list) => list.id === currentListId),
+    [currentListId, taskLists]
+  );
+
+  const focusAddTaskInput = useCallback(() => {
+    requestAnimationFrame(() => {
+      addTaskInputRef.current?.focus();
+    });
+  }, []);
+
+  const saveTasksCache = useCallback(
+    (listId, nextTasks) => {
+      if (!isDemoMode && api?.saveTasksToCache) {
+        api.saveTasksToCache(listId, nextTasks);
+      }
+    },
+    [api, isDemoMode]
+  );
 
   // Toggle shortcuts
   const toggleShortcuts = () => {
@@ -184,10 +236,7 @@ const AppPage = ({
       ctrl: true,
       handler: () => {
         if (currentListId || viewMode === "list") {
-          const input = document.querySelector(
-            'input[placeholder="Add a task"]'
-          );
-          if (input) input.focus();
+          focusAddTaskInput();
         }
       },
     },
@@ -551,19 +600,35 @@ const AppPage = ({
     if (!inputValue.trim() || !currentListId) return;
 
     const tempId = `temp_${Date.now()}`;
-    const newTask = { id: tempId, title: inputValue, status: "needsAction" };
-    setTasks([newTask, ...tasks]);
+    const newTask = {
+      id: tempId,
+      title: inputValue.trim(),
+      status: "needsAction",
+    };
+    setTasks((prev) => {
+      const next = [newTask, ...prev];
+      saveTasksCache(currentListId, next);
+      return next;
+    });
     setInputValue("");
     setIsSyncing(true);
 
     try {
-      await api.insertTask(currentListId, newTask.title);
-      // Reload tasks to get the real ID
-      const data = await api.getTasks(currentListId);
-      setTasks(data.items || []);
+      const createdTask = await api.insertTask(currentListId, newTask.title);
+      setTasks((prev) => {
+        const next = prev.map((task) =>
+          task.id === tempId ? { ...createdTask, starred: false } : task
+        );
+        saveTasksCache(currentListId, next);
+        return next;
+      });
     } catch (e) {
       console.error("Failed to add task", e);
-      setTasks((prev) => prev.filter((t) => t.id !== tempId));
+      setTasks((prev) => {
+        const next = prev.filter((t) => t.id !== tempId);
+        saveTasksCache(currentListId, next);
+        return next;
+      });
     } finally {
       setIsSyncing(false);
     }
@@ -716,10 +781,18 @@ const AppPage = ({
 
     setIsSyncing(true);
     try {
-      // Pass parentId as the 5th parameter to insertTask
-      await api.insertTask(currentListId, subtaskInput, "", null, parentId);
-      const data = await api.getTasks(currentListId);
-      setTasks(data.items || []);
+      const createdSubtask = await api.insertTask(
+        currentListId,
+        subtaskInput.trim(),
+        "",
+        null,
+        parentId
+      );
+      setTasks((prev) => {
+        const next = [createdSubtask, ...prev];
+        saveTasksCache(currentListId, next);
+        return next;
+      });
       setSubtaskInput("");
       setAddingSubtaskToId(null);
     } catch (e) {
@@ -997,13 +1070,7 @@ const AppPage = ({
                     setShowStarred(false);
                     setCurrentListId(taskLists[0]?.id || null);
                     setViewMode("list");
-                    // Focus on input after a short delay
-                    setTimeout(() => {
-                      const input = document.querySelector(
-                        'input[placeholder="Add a task"]'
-                      );
-                      if (input) input.focus();
-                    }, 100);
+                    focusAddTaskInput();
                   }}
                   className="w-full flex items-center gap-3 px-4 py-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-full text-slate-700 dark:text-slate-200 font-medium transition-colors shadow-sm"
                 >
@@ -1066,9 +1133,7 @@ const AppPage = ({
                 {isListsExpanded && (
                   <div className="mt-1 space-y-0.5">
                     {taskLists.map((list) => {
-                      const listTaskCount = tasks.filter(
-                        (t) => !showStarred
-                      ).length;
+                      const listTaskCount = listTaskCounts[list.id] || 0;
 
                       // Check if this list is being edited
                       if (editingListId === list.id) {
@@ -1219,8 +1284,7 @@ const AppPage = ({
                 ? "All Tasks"
                 : showStarred
                 ? "Starred"
-                : taskLists.find((l) => l.id === currentListId)?.title ||
-                  "Select a list"}
+                : currentTaskList?.title || "Select a list"}
               {isSyncing && (
                 <RotateCw size={14} className="text-blue-500 animate-spin" />
               )}
@@ -1292,7 +1356,7 @@ const AppPage = ({
               onAddTask={(listId) => {
                 setCurrentListId(listId);
                 setViewMode("list");
-                // Focus logic would go here
+                focusAddTaskInput();
               }}
               onToggleTask={async (taskId, currentStatus) => {
                 // Find which list this task belongs to
@@ -1437,26 +1501,9 @@ const AppPage = ({
                   <div className="p-4 space-y-1">
                     {/* Build task tree and render hierarchically */}
                     {(() => {
-                      const filteredTasks = showStarred
-                        ? tasks.filter(
-                            (t) => t.starred && t.status !== "completed"
-                          )
-                        : tasks.filter((t) => t.status !== "completed");
-
-                      const taskTree = buildTaskTree(filteredTasks);
-
-                      const renderTaskTree = (
-                        taskNode,
-                        level = 0,
-                        index = 0
-                      ) => {
-                        const childElements = taskNode.children?.map(
-                          (child, childIdx) =>
-                            renderTaskTree(
-                              child,
-                              level + 1,
-                              index + childIdx + 1
-                            )
+                      const renderTaskTree = (taskNode, level = 0) => {
+                        const childElements = taskNode.children?.map((child) =>
+                          renderTaskTree(child, level + 1)
                         );
 
                         return (
@@ -1509,15 +1556,12 @@ const AppPage = ({
                         );
                       };
 
-                      return taskTree.map((taskNode) =>
+                      return visibleTasks.map((taskNode) =>
                         renderTaskTree(taskNode)
                       );
                     })()}
 
-                    {tasks.some(
-                      (t) =>
-                        t.status === "completed" && (!showStarred || t.starred)
-                    ) && (
+                    {completedTasks.length > 0 && (
                       <>
                         <div className="px-2 py-4">
                           <div className="h-px bg-slate-100 dark:bg-slate-800 w-full" />
@@ -1536,25 +1580,14 @@ const AppPage = ({
                           )}
                           <span>
                             Completed (
-                            {
-                              tasks.filter(
-                                (t) =>
-                                  t.status === "completed" &&
-                                  (!showStarred || t.starred)
-                              ).length
-                            }
+                            {completedTasks.length}
                             )
                           </span>
                         </button>
 
                         {isCompletedExpanded && (
                           <div className="space-y-1 opacity-75">
-                            {(showStarred
-                              ? tasks.filter(
-                                  (t) => t.starred && t.status === "completed"
-                                )
-                              : tasks.filter((t) => t.status === "completed")
-                            ).map((task) => (
+                            {completedTasks.map((task) => (
                               <DesktopTaskItem
                                 key={task.id}
                                 task={task}
@@ -1579,6 +1612,7 @@ const AppPage = ({
                     placeholder="Add a task"
                     disabled={!currentListId && !showStarred}
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm border border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 dark:text-white disabled:opacity-50"
+                    ref={addTaskInputRef}
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                   />

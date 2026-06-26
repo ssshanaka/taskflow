@@ -124,4 +124,4 @@ const DesktopTaskItem = ({
   );
 };
 
-export default DesktopTaskItem;
+export default React.memo(DesktopTaskItem);
